@@ -1,0 +1,823 @@
+                Operating Systems
+                    Lecture 2
+        Four fundamental concepts:
+thread, address space, process, dual mode
+
+                      Prof. Yunming XIAO
+                     School of Data Science
+
+
+
+
+   Acknowledgments: Ion Stoica and Matei Zaharia, Berkeley CS 162
+        Recall: what is an Operating System?
+
+
+
+
+    Referee                Illusionist                 Glue
+
+ Manage protection,    Provide clean, easy-to-   Provides a set of
+isolation, and          use abstractions of      common services
+sharing of resources
+                         physical resources
+
+
+                                                                     2
+                   Virtualization: Operating System
+  • Operating System virtualizes* hardware to processes
+    (applications) providing high-level abstractions (e.g., process
+    thread, sockets, etc)
+                     Process: an active instance of a program
+
+                                Process 1               Process 2
+
+
+                                       Operating System
+
+
+            Hardware CPU     Memory           Storage
+
+                                   I/O Ctrl
+
+
+*virtualization: provides the illusion that each process uses its own machine; also
+provides illusion if infinite memory and processor (though there will be hit in performance)   3
+            Virtualization: Operating System
+• OS as referee:
+  • Manage resource sharing, protection, isolation
+
+
+
+
+                        Process 1              Process 2
+
+
+                               Operating System
+
+
+       Hardware CPU   Memory         Storage
+
+                          I/O Ctrl
+
+
+
+                                                           4
+             Virtualization: Operating System
+• OS as an illusionist:
+  • Hides hardware complexity;
+  • Virtualizes hardware, e.g., provides clean abstractions
+
+
+                        Process 1              Process 2
+
+
+                               Operating System
+
+
+       Hardware CPU   Memory         Storage
+
+                          I/O Ctrl
+
+
+
+                                                              5
+            Virtualization: Operating System
+• OS as glue:
+  • Provides higher level services to make
+  • programmer’s job easier, e.g., file systems, networking, windows
+
+
+                        Process 1              Process 2
+
+
+                               Operating System
+
+
+       Hardware CPU   Memory         Storage
+
+                          I/O Ctrl
+
+
+
+                                                                       6
+                       Virtualization: Virtual Machine
+  • Hypervisor creates virtual machines. A virtual machine
+    virtualizes* hardware to Operating System providing same
+    hardware abstraction
+
+              Process 1, 1     Process 1, 2         Process 2, 1     Process 2, 2
+
+
+                  Operating System 1                      Operating System 2
+
+                                             Hypervisor
+
+            Hardware         Memory
+                       CPU                   Storage
+
+                                  I/O Ctrl
+
+
+*virtualization: provides the illusion that each operating system is using the same physical
+machine; It provides fault isolation; if an OS crashes won’t affect other OSes                 7
+               Virtualization: Virtual Machine
+• Hypervisor creates virtual machines. A virtual machine
+  virtualizes* hardware to Operating System providing same
+  hardware abstraction
+
+        Process 1, 1    Process 1, 2        Process 2, 1    Process 2, 2
+
+
+            Operating System 1                   Operating System 2
+
+                                  Hypervisor
+
+                            Operating System 0
+
+      Hardware CPU     Memory         Storage
+
+                           I/O Ctrl
+
+                                                                           8
+         Today: four fundamental OS concepts
+• Thread: execution context
+  • Fully describes program state
+  • Program Counter, Registers, Stack, Execution Flags,
+• Address space (with or w/o translation)
+  • Set of memory addresses accessible to program (for read or write)
+  • May be distinct from memory space of the physical machine
+    (in which case programs operate in a virtual address space)
+• Process: an instance of a running program
+  • Address Space + one or more Threads
+• Dual mode operation / Protection
+  • Only the “system” has the ability to access certain resources
+  • Combined with translation, isolates programs from each other and
+    the OS from programs
+                                                                        9
+                    OS bottom line: run programs
+                                                                                           0xFFF
+                                                   Executable
+                       Program Source                                         OS           …
+
+
+                                        compiler
+                             int
+
+                    editor
+                             main()                   data        Load &     stack
+                             {
+                                                                  Execute
+                                                                                            Memory
+                                …;
+                              }                    instructions
+                                                                             heap
+                             foo.c                   a.out                    data
+
+• Write them and compile them                                               instructions
+• Load instruction and data segments of                                                    0x000…
+  executable file into memory                          Program counter
+• Create stack and heap                                                      registers
+• “Transfer control to program”                                             Processor
+• Provide services to program while
+  protecting OS and program
+                                                                                                     10
+                        Instruction Fetch/Decode/Execute
+
+    Processor                        Memory
+                        next
+Program counter:
+    Instruction fetch                instruction
+    Decode          decode
+
+
+                    Registers
+
+
+    Execute
+
+
+                                        data
+
+
+                                                           11
+                    Instruction Fetch/Decode/Execute
+
+Processor                        Memory
+                    next
+         PC:
+Instruction fetch                instruction
+Decode          decode
+
+
+                Registers
+
+
+Execute                                           Von Neumann
+                                               computer architecture
+
+                                    data
+
+
+                                                                       12
+What happens during program execution?
+                                           Addr 232-1
+            R0
+             …                                 …
+            R31            Fetch             Data1
+            F0             Exec              Data0
+             …                              Inst237
+            F30
+            PC                              Inst236
+                                               …
+                                             Inst5
+ • Execution sequence:
+                                             Inst4
+    – Fetch Instruction at PC
+                                             Inst3      PC
+    – Decode
+                                             Inst2      PC
+    – Execute (possibly using registers)     Inst1      PC
+    – Write results to registers/mem         Inst0      PC
+    – PC = Next Instruction(PC)
+                                             Addr 0
+    – Repeat
+                                                             13
+               First OS concept: thread of control
+• Thread: single unique execution context
+  • Program Counter, Registers, Execution Flags, Stack, Memory State
+• A thread is executing on a processor (core) when it is resident in the
+  processor registers
+• Resident means: registers hold the root state (context) of the thread:
+  • Including program counter (PC) register & currently executing instruction
+     • PC points at next instruction in memory
+     • Instructions stored in memory
+  • Including intermediate values for ongoing computations
+     • Can include actual values (like integers) or pointers to values in memory
+  • Stack pointer holds the address of the top of stack (which is in memory)
+  • The rest is “in memory”
+
+
+                                                                                   14
+            First OS concept: thread of control
+• A thread is suspended (not executing) when its state is not
+  loaded (resident) into the processor
+  • Processor state pointing at some other thread
+  • Program counter register is not pointing at next instruction from this
+    thread
+  • Often: a copy of the last value for each register stored in memory
+
+
+
+
+                                                                             15
+               Second OS concept: address space
+• Address space: the set of accessible addresses                      0xFFF…
+                                                           stack
+  + state associated with them:
+  • For 32-bit processor: 232 = 4 billion (109)
+    addresses                                             heap
+  • For 64-bit processor: 264 = 18 quintillion (1018)
+                                                        static data
+    addresses
+                                                          code        0x000…
+• What happens when you read or write to an
+  address?
+  • Perhaps acts like regular memory
+  • Perhaps ignores writes
+  • Perhaps causes I/O operation (Memory-mapped I/O)
+  • Perhaps causes exception (fault)
+  • Communicates with another program
+  • ….                                                                         16
+            Address space in a picture
+                                                        0xFFF…
+                                            stack
+      PC:
+      SP:
+
+                                            heap
+            Processor
+                                          static data
+            registers
+                                       instruction
+                                     code segment
+                                                        0x000…
+
+
+• What’s in the code segment? Static data segment?
+• What’s in the stack segment?
+  • How is it allocated? How big is it?
+• What’s in the heap segment?
+  • How is it allocated? How big is it?
+                                                                 17
+                        Simple example
+#include <stdio.h>
+#include <stdlib.h>
+                                     Data segment
+int global_var = 10;
+void stack_function() {
+   int stack_var_in_func = 30;
+   printf("Address of stack_var_in_func: %p\n",
+   (void*)&stack_var_in_func);
+}
+int main() {                                        Stack segment
+   int stack_var = 20;
+    int *heap_var = (int*)malloc(sizeof(int));          Heap
+    if (heap_var == NULL) {
+       fprintf(stderr, "Failed to allocate memory on the
+       heap\n");
+       return 1;
+    }
+    *heap_var = 40; // Storing a value in the heap memory.
+    // The programmer is responsible for freeing heap
+    memory. free(heap_var);
+    return 0;
+}
+                                                                    18
+                    Third OS concept: process
+• Definition: execution environment for a program with Restricted Rights
+  • Address space with one or more threads
+  • Owns memory (address space)
+  • Owns file descriptors, file system context, …
+  • Encapsulate one or more threads sharing process resources
+• Application program executes as a process
+  • Complex applications can fork/exec child processes [later!]
+• Why processes?
+  • Protected from each other!
+  • OS Protected from them
+  • Processes provides memory protection
+• Fundamental tradeoff between protection and efficiency
+  • Communication easier within a process
+  • Communication harder between processes                                 19
+Single and multithreaded processes
+
+                 • Threads encapsulate concurrency:
+                   • “Active” component
+                 • Address spaces encapsulate
+                   protection:
+                   • “Passive” component
+                   • Keeps buggy programs from crashing
+                     the system
+                 • Why have multiple threads per
+                   address space?
+                   • Parallelism: take advantage of actual
+                     hardware parallelism (e.g., multicore)
+                   • Concurrency: ease of handling I/O
+                     and other simultaneous events
+                                                              20
+Multiprogramming – multiple processes
+
+                               stack
+P1   P2       Pn
+          …
+                               heap
+                               static data
+     OS                        code
+
+                               stack
+
+                               heap
+                               static data
+                               code
+
+                               stack
+                               heap
+                               static data
+                               code
+
+
+                                             21
+    Illusion of multiple processors with a single core
+
+vCPU1 vCPU2   vCPU3
+
+                           vCPU1    vCPU2    vCPU3    vCPU1   vCPU2   CPU core
+ Shared Memory
+                         Time
+   • Assume a single processor. How do we provide the illusion of
+     multiple processors?
+      •   Multiplex in time!
+   • Each virtual “CPU” needs a structure to hold:
+      •   Program Counter (PC), Stack Pointer (SP), Registers
+   • How switch from one virtual CPU to the next?
+      •   Save PC, SP, and registers in current state block
+      •   Load PC, SP, and registers from new state block
+   • What triggers switch?
+      •   Timer, voluntary yield, I/O, other things                              22
+              The basic problem of concurrency
+• The basic problem of concurrency involves resources:
+   • Hardware: single CPU, single DRAM, single I/O devices
+   • Multiprogramming API: processes think they have exclusive access to
+     shared resources
+• OS has to coordinate all activity
+   • Multiple processes, I/O interrupts, …
+   • How can it keep all these things straight?
+• Basic Idea: Use Virtual Machine abstraction
+   • Simple machine abstraction for processes
+   • Multiplex these abstract machines
+
+
+
+
+                                                                           23
+Properties of this simple multiprogramming technique
+• All virtual CPUs share same non-CPU resources
+  • I/O devices the same
+  • Memory the same
+• Consequence of sharing:
+  • Each thread can access the data of every other thread (good for sharing,
+    bad for protection)
+  • Threads can share instructions (good for sharing, bad for protection)
+• This (unprotected) model is common in:
+  • Embedded applications
+  • Windows 3.1/Early Macintosh (switch only with yield)
+  • Windows 95—ME (switch with both yield and timer)
+
+
+
+                                                                               24
+                    Protection and isolation
+• Why do we need processes ?
+  • Reliability: bugs can only overwrite memory of process they are in
+  • Security and privacy: malicious or compromised process can’t read or write
+    other process’ data
+  • (To some degree) Fairness: enforce shares of disk, CPU
+
+
+
+
+                                                                                 25
+                                                 Protection
+
+                                  Compiled                                                     Compiled
+                                  Program                                                      Program
+
+                                  System Libs                                                  System Libs
+
+
+                                  Process 1                                                    Process 2
+
+            Threads     Address Spaces           Files          Sockets    Threads   Address Spaces          Files   Sockets
+
+
+                                                              Operating System
+      ISA
+                                                                                      Networks
+                 Processor               PgTbl            Memor y
+                                         &TLB                              Storage
+Hardware                                                             OS
+                                                                     Mem
+
+
+                                                         I/O Ctrlr
+
+
+
+                                                                                                                               26
+                                                 Protection
+
+                                  Compiled                                                     Compiled
+                                  Program                                                      Program
+
+                                  System Libs                                                  System Libs
+
+
+                                  Process 1                                                    Process 2
+
+            Threads     Address Spaces           Files          Sockets    Threads   Address Spaces          Files   Sockets
+
+
+                                                              Operating System
+      ISA
+                                                                                      Networks
+                 Processor               PgTbl            Memor y
+                                         &TLB                              Storage
+Hardware                                                             OS
+                                                                     Mem
+
+
+                                                         I/O Ctrlr
+
+
+
+                                                                                                                               27
+                                                 Protection
+
+                                  Compiled                                                     Compiled
+                                  Program                                                      Program
+
+                                  System Libs                                                  System Libs
+
+
+                                  Process 1                                                    Process 2
+
+            Threads     Address Spaces           Files          Sockets    Threads   Address Spaces          Files   Sockets
+
+
+                                                              Operating System
+      ISA
+                                                                                      Networks
+                 Processor               PgTbl            Memor y
+                                         &TLB                              Storage
+Hardware                                                             OS
+                                                                     Mem
+
+
+                                                         I/O Ctrlr
+
+
+
+                                                                                                                               28
+                                                    Protection
+                                                                              • OS isolates processes
+                       Process 1       Process 2          Process 3
+                                                                                from each other
+Software                     OS HardwareVir tualization
+
+Hardware    ISA
+                                            Memor                             • OS isolates itself from
+                                            y
+                                                                                other processes
+           Processor                                             Protection
+                                                                 Boundar y
+                                           OS Memory
+                                                                              • …even though they
+                             Ctrlr                                              are actually running on
+                                                                 Displays
+                                               Networks
+                                                                                the same hardware!
+           Storage
+
+                                                    Inputs
+
+
+
+                                                                                                          29
+                        Protection and isolation
+• OS must protect user programs from one another
+• Operating System must protect itself from user programs
+  • Reliability: compromising the operating system generally causes it to crash
+  • Security: limit the scope of what processes can do
+  • Privacy: limit each process to the data it is permitted to access
+  • Fairness: each should be limited to its appropriate share of system
+    resources (CPU time, memory, I/O, etc)
+• Primary mechanism: limit the translation from program address
+  space to physical memory space
+  • Can only touch what is mapped into process address space
+• Additional mechanisms:
+  • Privileged instructions, I/O instructions, special registers
+  • syscall processing, subsystem implementation
+     • (e.g., file access rights, etc.)
+                                                                                  30
+           Fourth OS concept: dual mode operation
+• Hardware provides at least two modes (at least 1 mode bit):
+  1. Kernel Mode (or “supervisor” mode)
+  2. User Mode
+• Certain operations are prohibited when running in user mode
+  • Changing the page table pointer, disabling interrupts, interacting directly w/
+    hardware, writing to kernel memory
+• Carefully controlled transitions between user mode and kernel mode
+  • System calls, interrupts, exceptions
+
+
+
+
+                                                                                     31
+      User/Kernel (privileged) mode
+
+
+                      User Mode
+                       interrupt
+                                    exception
+           syscall
+
+                     rtn      rfi
+                                                exit
+             exec    Kernel Mode
+
+
+
+
+Limited HW access Full HW access
+
+                                                       32
+   Simple protection: base and bound (B&B)
+         code       0000…            code
+                                                 0000…
+      static data
+                                   static data
+        heap
+                                     heap
+
+        stack       0100…            stack
+                     Base
+   0010…              1000…           code       1000…
+                              >=
+Program 1010…                      static data
+address                               heap
+                     Bound    <
+                      1100…
+                                      stack      1100…
+
+
+                                                 FFFF…
+                                                         33
+         Simple protection: base and bound (B&B)
+                code       0000…                  code
+                                                              0000…
+             static data
+                                                static data
+               heap
+                                                  heap
+
+               stack       0100…                  stack
+                            Base
+         0010…               1000…                 code       1000…
+                                           >=
+     Program 1010…                              static data
+     address                                       heap
+                            Bound          <
+ Addresses translated                              stack      1100…
+ when program loaded         1100…
+
+• Still protects OS and isolates program
+                                                              FFFF…
+• Requires relocating loader
+• No addition on address path                                         34
+       Another idea: address space translation
+• Program operates in an address space that is distinct from
+  the physical memory space of the machine
+
+
+
+                                                 0x000…
+         Processor
+                                        Memory
+          Registers     Translator
+
+
+
+                                                 0xFFF…
+
+                                                               35
+         Simple protection: base and bound (B&B)
+                 code       0000…                       code
+                                                                    0000…
+              static data
+                              Addresses trans-        static data
+                heap
+                              lated on-the-fly          heap
+
+                stack       0100…                       stack
+                             Base
+        0010…                 1000…                      code       1000…
+    Program      0010…                                static data
+                                              1010…      heap
+    address
+                             Bound        <
+                              0100…
+                                                         stack      1100…
+
+• Hardware relocation
+                                                                    FFFF…
+• Can the program touch OS?
+• Can it touch other programs?                                              36
+Trying it together: simple B&B: OS load process
+                                                          0000…
+                                              code
+P1   P2       Pn                            static data
+          …
+                                              heap
+
+     OS                                       stack
+                   sysmod   1                             1000…
+                                              code
+                    Base    xxxx…   0000…   static data
+                   Bound    xxxx…   FFFF…     heap
+                    uPC     xxxx…
+                     PC                       stack       1100…
+                    regs                                  3000…
+                                              code
+                                …           static data
+                                              heap
+
+                                              stack       3080…
+                                                          FFFF…   37
+       Simple B&B: OS gets ready to execute process
+                                                             0000…
+                                             RTU   code
+       P1    P2        Pn                      static data
+                   …
+                                                   heap
+
+              OS                                   stack
+                            sysmod   1                       1000…
+                                                   code
+                             Base    1000…     static data
+                            Bound    1100…         heap
+                             uPC     0000…
+                              PC                   stack     1100…
+                             regs                            3000…
+                                                   code
+                                     00FF…
+                                         …     static data
+• Privileged instruction: set
+                                                   heap
+  special registers
+• RTU (Return To Usermode)                         stack     3080…
+                                                             FFFF…   38
+                  Simple B&B: user code running
+                                                           0000…
+                                                  code
+       P1   P2        Pn                     static data
+                  …
+                                                  heap
+
+             OS                                   stack
+                           sysmod   0                      1000…
+                                                  code
+                            Base    1000…    static data
+                           Bound    1100…         heap
+                            uPC     xxxx…
+                             PC     0000…         stack    1100…
+                            regs                           3000…
+                                                  code
+                                    00FF…
+• How does kernel switch                …    static data
+  between processes?                              heap
+• First question: How to                          stack    3080…
+  return to system?                                        FFFF…   39
+            3 types of user to kernel mode transfer
+• Syscall
+   • Process requests a system service, e.g., exit
+   • Like a function call, but “outside” the process
+   • Does not have the address of the system function to call
+   • Like a Remote Procedure Call (RPC) – for later
+   • Marshall the syscall id and args in registers and exec syscall
+• Interrupt
+   • External asynchronous event triggers context switch
+   • e. g., Timer, I/O device
+   • Independent of user process
+• Trap or Exception
+   • Internal synchronous event in process triggers context switch
+   • e.g., Protection violation (segmentation fault), Divide by zero, …
+                                                                          40
+          3 types of user to kernel mode transfer
+• Syscall
+• Interrupt
+• Trap or Exception
+
+• All 3 are an UNPROGRAMMED* CONTROL TRANSFER
+   • Where does it go?
+
+
+ *Switching to OS without a direct instruction from the running process
+
+
+
+
+                                                                          41
+How do we get the system target address of the
+     “unprogrammed control transfer”?
+
+
+
+
+                                                 42
+             Interrupt vector
+
+
+
+                         Address and properties
+interrupt                of each interrupt handler
+number (i)
+
+
+
+
+                                intrpHandler_i () {
+                                 …
+                                }
+
+
+
+
+                                                      43
+     Conclusion: four fundamental OS concepts
+• Process: an instance of a running program
+  • Address Space + one or more Threads
+• Thread: execution context
+  • Fully describes program state
+  • Program Counter, Registers, Stack, Execution Flags,
+• Address space (with or w/o translation)
+  • Set of memory addresses accessible to program (for read or write)
+  • May be distinct from memory space of the physical machine
+    (in which case programs operate in a virtual address space)
+• Dual mode operation / protection
+  • Only the “system” has the ability to access certain resources
+
+
+
+                                                                        44
+Thanks
+

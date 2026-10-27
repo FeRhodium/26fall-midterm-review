@@ -1,0 +1,948 @@
+               Operating Systems
+                  Lecture 12
+               Scheduling:
+fair sharing, lottery scheduling, EEVDF
+
+                     Prof. Yunming XIAO
+                    School of Data Science
+
+
+
+
+  Acknowledgments: Ion Stoica and Matei Zaharia, Berkeley CS 162
+                        Recall: scheduling
+
+
+
+
+• Question: how is the OS to decide which of several tasks to take
+  off a queue?
+• Scheduling: deciding which threads are given access to
+  resources from moment to moment
+  • Often, we think in terms of CPU time, but could also think about access
+    to resources like network bandwidth or disk access                        2
+             Recall: FCFS/FIFO vs. RR
+                    P2 P4       P1           P3
+   Best FCFS:       [8] [24]    [53]         [68]
+                   0 8         32           85            153
+              Quantum    P1     P2     P3           P4    Average
+              Best FCFS 32      0      85           8     31¼
+              Q=1        84     22     85           57    62
+              Q=5        82     20     85           58    61¼
+  Wait        Q=8        80     8      85           56    57¼
+  Time
+              Q = 10     82     10     85           68    61¼
+              Q = 20     72     20     85           88    66¼
+              Worst FCFS 68     145    0            121   83½
+              Best FCFS 85      8      153          32    69½
+              Q=1        137    30     153          81    100½
+              Q=5        135    28     153          82    99½
+Completion
+              Q=8        133    16     153          80    95½
+  Time
+              Q = 10     135    18     153          92    99½
+              Q = 20     125    28     153          112   104½
+              Worst FCFS 121    153    68           145   121¾      3
+                   Recall: SRTF
+
+                                       Disk utilization:
+C            A                B        9/201 ~ 4.5%
+
+
+ C’s             RR 100ms time slice   Disk utilization:
+ I/O                                   ~90% but lots
+CABAB… C
+                                       of wakeups!
+
+                  RR 1ms time slice
+ C’s   C’s
+ I/O   I/O                             Disk utilization:
+C A    A     A                         90%
+
+                       SRTF
+ C’s C’s
+ I/O I/O
+                                                           4
+Multi-level feedback scheduling
+
+
+
+
+                                  5
+How to handle simultaneous mix of different types of apps?
+
+  • Consider mix of interactive and high throughput apps:
+     • How to best schedule them?
+     • How to recognize one from the other?
+        • Do you trust app to say that it is “interactive”?
+     • Should you schedule the set of apps identically on servers,
+       workstations, pads, and cellphones?
+  • For instance, is Burst Time (observed) useful to decide which
+    application gets CPU time?
+                                                      Weighted toward small
+     • Short Bursts ⇒ Interactivity ⇒ High Priority?         bursts
+
+
+
+
+                                                                              6
+How to handle simultaneous mix of different types of apps?
+
+  • Assumptions encoded into many schedulers:
+     • Apps that sleep a lot and have short bursts must be interactive
+       apps – they should get high priority
+     • Apps that compute a lot should get low(er?) priority, since they
+       won’t notice intermittent bursts from interactive apps
+  • Hard to characterize apps:
+     • What about apps that sleep for a long time, but then compute for a
+       long time?
+     • Or, what about apps that must run under all circumstances (say
+       periodically)
+
+
+                                                                            7
+               Multi-level feedback scheduling
+
+                                              Long-Running Compute
+                                                Tasks Demoted to
+                                                   Low Priority
+
+
+
+
+• Another method for exploiting past behavior
+   • Multiple queues, each with different priority
+      • Higher priority queues often considered “foreground” tasks
+   • Each queue has its own scheduling algorithm
+      • e.g. foreground – RR, background – FCFS
+      • Sometimes multiple RR priorities with quantum increasing
+        exponentially (highest:1ms, next: 2ms, next: 4ms, etc)       8
+               Multi-level feedback scheduling
+
+                                              Long-Running Compute
+                                                Tasks Demoted to
+                                                   Low Priority
+
+
+
+
+• Adjust each job’s priority as follows (details vary)
+   • Job starts in highest priority queue
+   • If timeout expires, drop one level
+   • If timeout doesn’t expire, push up one level (or to top)
+
+
+                                                                     9
+              Multi-level feedback scheduling
+
+                                           Long-Running Compute
+                                             Tasks Demoted to
+                                                Low Priority
+
+
+
+
+• Result approximates SRTF:
+   • CPU bound jobs drop like a rock
+   • Short-running I/O bound jobs stay near top
+
+
+
+
+                                                                  10
+               Multi-level feedback scheduling
+
+                                                  Long-Running Compute
+                                                    Tasks Demoted to
+                                                       Low Priority
+
+
+
+
+• Scheduling must be done between the queues
+   • Fixed priority scheduling:
+     • serve all from highest priority, then next priority, etc.
+  • Time slice:
+     • each queue gets a certain amount of CPU time
+     • e.g., 70% to highest, 20% next, 10% lowest
+                                                                         11
+                   Multi-level feedback scheduling
+
+                                                Long-Running Compute
+                                                  Tasks Demoted to
+                                                     Low Priority
+
+
+
+
+• Countermeasure: user action that can foil intent of the OS designers
+  • For multilevel feedback, put in a bunch of meaningless I/O to keep job’s
+    priority high
+  • Of course, if everyone did this, wouldn’t work!
+• Example of Othello program:
+  • Playing against competitor, so key was to do computing at higher priority
+    than the competitors
+     • Put in printf’s, ran much faster!                                        12
+                Case study: Linux O(1) scheduler
+                        Kernel/Realtime tasks    User tasks
+                    0                         100            139
+
+• Priority-based scheduler: 140 priorities
+   • 40 for “user tasks” (set by “nice”), 100 for “Realtime/Kernel”
+   • Lower priority value ⇒ higher priority (for realtime values)
+   • Highest priority value ⇒ Lower priority (for nice values)
+   • All algorithms O(1)
+      • Timeslices/priorities/interactivity credits all computed when job finishes
+        time slice
+      • 140-bit mask indicates presence or absence of job at given priority level
+
+
+                                                                                     13
+                Case study: Linux O(1) scheduler
+                       Kernel/Realtime tasks   User tasks
+                   0                       100           139
+
+• Two separate priority queues: “active” and “expired”
+   • All tasks in the active queue use up their timeslices and get placed on
+     the expired queue, after which queues swapped
+• Timeslice depends on priority – linearly mapped onto timeslice
+  range
+   • Like a multi-level queue (one queue per priority) with different timeslice
+     at each level
+   • Execution split into “Timeslice Granularity” chunks – round robin
+     through priority
+                                                                                  14
+              Case study: Linux O(1) scheduler
+
+• Heuristics
+   • User-task priority adjusted ±5 based on heuristics
+      • P → sleep_avg = sleep_time – run_time
+      • Higher sleep_avg ⇒ more I/O bound the task, more reward (and vice
+        versa)
+   • Interactive Credit (IC)
+      • Earned when a task sleeps for a “long” time
+      • Spend when a task runs for a “long” time
+      • IC is used to provide hysteresis to avoid changing interactivity for
+        temporary changes in behavior
+   • However, “interactive tasks” get special dispensation
+      • To try to maintain interactivity
+      • Placed back into active queue, unless some other task has been
+        starved for too long…
+                                                                               15
+Fair sharing
+
+
+
+
+               16
+                      Scheduling fairness
+
+• Two identical processes should get
+   • the “same” service, experience the
+     “same” performance
+• Work-conserving scheduler: does
+  not leave the CPU idle when there
+                                            SIGCOMM ‘89
+  is work to do
+• Note: fairness avoids starvation
+• Example: round-robin
+
+
+
+                                                OSDI ‘94
+                     Scheduling fairness
+
+• Next:
+   • Fair sharing / Fair queueing /
+     Max-min fairness)
+   • Originated in networking
+   • Later applied to CPU scheduling
+     and other resources (lottery          SIGCOMM ‘89
+
+
+
+     scheduling)
+
+
+
+
+                                               OSDI ‘94
+                  Fair allocation: example 1
+Resource with capacity, C = 1 0
+                                               C = 10   A[1] = ?
+Two jobs with demands D [1] = 8, D [ 2 ] = 6
+How m u c h should each job get?
+• A [1 ] = ?
+• A [2 ] = ?
+
+
+                                                        A[2] = ?
+                  Fair allocation: example 1
+Resource with capacity, C = 1 0
+                                               C = 10   A[1] = 5
+Two jobs with demands D [1] = 8, D [ 2 ] = 6
+How m u c h should each job get?
+• A [1 ] = 5
+• A [2 ] = 5
+
+
+                                                        A[2] = 5
+                  Fair allocation: example 2
+Resource with capacity, C = 1 0
+                                               C = 10   A[1] = ?
+Two jobs with demands D [1] = 8, D [ 2 ] = 4
+How m u c h should each job get?
+• A [1 ] = ?
+• A [2 ] = ?
+
+
+                                                        A[2] = ?
+                  Fair allocation: example 2
+Resource with capacity, C = 1 0
+                                               C = 10   A[1] = 6
+Two jobs with demands D [1] = 8, D [ 2 ] = 4
+How m u c h should each job get?
+• A [1 ] = 6
+• A [2 ] = 4
+
+
+                                                        A[2] = 4
+                  Fair allocation: example 3
+Resource with capacity, C = 1 0
+                                                  C = 10   A[1] = ?
+Three jobs with demands D [1] = 8, D [ 2 ] = 6,
+D[3] = 2
+How m u c h should each job get?
+• A [1 ] = ?                                                A[2] = ?
+
+• A [2 ] = ?
+                                                            A[3] = ?
+• A [3 ] = ?
+                  Fair allocation: example 3
+Resource with capacity, C = 1 0
+                                                  C = 10   A[1] = 4
+Three jobs with demands D [1] = 8, D [ 2 ] = 6,
+D[3] = 2
+How m u c h should each job get?
+• A [1 ] = ?                                                A[2] = 4
+
+• A [2 ] = ?
+                                                            A[3] = 2
+• A [3 ] = ?
+                 Single resource: fair sharing
+                                                       100 %
+                                                               33%
+• n jobs want to share a resource (e.g. CPU)
+   • Solution: give each 1/n of the shared resource    50 %    33%
+   • Assume n = 3                                              33%
+                                                        0%
+• Generalized by max-min fairness
+                                                       100 %   20%
+   • Handles if a job wants less than its fair share
+   • E.g. job 1 wants no more than 20%                         40%
+                                                        50 %
+• Generalized by weighted max-min fairness                     40%
+   • Give weights to jobs according to importance        0%
+                                                       100%
+   • Job 1 gets weight 1, job 2 weight 2                       33%
+
+                                                       50%
+                                                               66%
+
+                                                        0%
+                   Why max-min fairness?
+
+• Weighted Fair Sharing / Proportional Shares
+   • User 1 gets weight 2, user 2 weight 1
+• Priorities
+   • Give user 1 weight 1000, user 2 weight 1
+• Reservations
+   • Ensure user 1 gets 10% of a resource
+   • Give user 1 weight 10, sum weights ≤ 100
+• Deadline-based scheduling
+   • Given a user job’s demand and deadline, compute user’s
+     reservation/weight
+• Isolation
+   • Users cannot affect others beyond their share
+                                                              26
+                           Widely used
+
+• OS: proportional sharing, lottery, Linux’s CFS, …
+• Networking: wfq, wf2q, sfq, drr, csfq, ...
+• Datacenters: Hadoop’s fair sched, Dominant Resource Fairness
+  (DRF)
+                         Max-min fairness
+C # resource capacity
+S = {J1, J2, …, Jn} # set of n jobs
+D[n] # demand vector; D[i]: demand of job i
+A[n] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share
+  b = true # no job in S has demand < f
+  for every Ji in S:
+    if D[i] < f
+      b = false
+      A[i] = D[i]
+      C = C – D[i]
+      S = S \ {Ji}
+  if b:
+    for every Ji in S:
+      A[i] = f
+      S = S \ {Ji}
+               Max-min fairness: running example
+C = 10 # resource capacity
+S = {J1, J2, J3} # set of N jobs
+D = [8, 6, 2] # demand vector; D[i]: demand of job i
+A = [0, 0, 0] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share                   C = 10                                   10
+  b = true # no job in S has demand < f    S = {J1, J2, J3}
+  for every j in S:                        D [ 1 ] = 8, D [ 2 ] = 6 , D [ 3 ] = 2
+    if D[i] <= f
+      b = false
+      A[i] = D[i]
+      C = C – D[i]
+      S = S \ {j}
+  if b:
+    for every j in S:
+      A[i] = f
+      S = S \ {j}
+               Max-min fairness: running example
+C = 10 # resource capacity
+S = {J1, J2, J3} # set of N jobs
+D = [8, 6, 2] # demand vector; D[i]: demand of job i
+A = [0, 0, 0] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share                   C = 10                                   10
+  b = true # no job in S has demand < f    S = {J1, J2, J3}
+  for every j in S:                        D [ 1 ] = 8, D [ 2 ] = 6 , D [ 3 ] = 2
+    if D[i] <= f                           f = 10/3
+      b = false
+      A[i] = D[i]
+      C = C – D[i]
+      S = S \ {j}
+  if b:
+    for every j in S:
+      A[i] = f
+      S = S \ {j}
+               Max-min fairness: running example
+C = 10 # resource capacity
+S = {J1, J2, J3} # set of N jobs
+D = [8, 6, 2] # demand vector; D[i]: demand of job i
+A = [0, 0, 0] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share                   C = 10                                   10
+  b = true # no job in S has demand < f    S = {J1, J2, J3}
+  for every j in S:                        D [ 1 ] = 8, D [ 2 ] = 6 , D [ 3 ] = 2
+    if D[i] <= f                           f = 10/3
+      b = false                            b = true
+      A[i] = D[i]
+      C = C – D[i]
+      S = S \ {j}
+  if b:
+    for every j in S:
+      A[i] = f
+      S = S \ {j}
+               Max-min fairness: running example
+C = 10 # resource capacity
+S = {J1, J2, J3} # set of N jobs
+D = [8, 6, 2] # demand vector; D[i]: demand of job i
+A = [0, 0, 0] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share                   C = 10                                   10
+  b = true # no job in S has demand < f    S = {J1, J2, J3}
+  for every j in S:                        D [ 1 ] = 8, D [ 2 ] = 6 , D [ 3 ] = 2
+    if D[i] <= f                           f = 10/3
+      b = false                            b = true
+      A[i] = D[i]                          D [ 3 ] < 10/3 → A [ 3 ] = D [ 3 ]
+      C = C – D[i]
+      S = S \ {j}
+  if b:
+    for every j in S:
+      A[i] = f
+      S = S \ {j}
+               Max-min fairness: running example
+C = 10 # resource capacity
+S = {J1, J2, J3} # set of N jobs
+D = [8, 6, 2] # demand vector; D[i]: demand of job i
+A = [0, 0, 0] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share                   C = 1 0 -2 = 8                            10
+  b = true # no job in S has demand < f    S = {J1, J2}
+  for every j in S:                        D [ 1 ] = 8, D [ 2 ] = 6 , D [ 3 ] = 2
+    if D[i] <= f                           f = 10/3
+      b = false                            b = false
+      A[i] = D[i]                          D [ 3 ] < 10/3 → A [ 3 ] = D [ 3 ]
+      C = C – D[i]                                                                  A[3] = 2
+      S = S \ {j}
+  if b:
+    for every j in S:
+      A[i] = f
+      S = S \ {j}
+               Max-min fairness: running example
+C = 10 # resource capacity
+S = {J1, J2, J3} # set of N jobs
+D = [8, 6, 2] # demand vector; D[i]: demand of job i
+A = [0, 0, 0] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share                   C =8                                      10
+  b = true # no job in S has demand < f    S = {J1, J2}
+  for every j in S:                        D [ 1 ] = 8, D [ 2 ] = 6 , D [ 3 ] = 2
+    if D[i] <= f                           f = 8/2 = 4
+      b = false                            b = true
+      A[i] = D[i]
+      C = C – D[i]                                                                  A[3] = 2
+      S = S \ {j}
+  if b:
+    for every j in S:
+      A[i] = f
+      S = S \ {j}
+               Max-min fairness: running example
+C = 10 # resource capacity
+S = {J1, J2, J3} # set of N jobs
+D = [8, 6, 2] # demand vector; D[i]: demand of job i
+A = [0, 0, 0] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share                   C =8                                      10
+  b = true # no job in S has demand < f    S = {J1, J2}
+  for every j in S:                        D [ 1 ] = 8, D [ 2 ] = 6 , D [ 3 ] = 2
+    if D[i] <= f                           f= 4
+      b = false                            b = true
+      A[i] = D[i]                          D [ 1 ] > f; D [ 2 ] > f
+      C = C – D[i]                                                                  A[3] = 2
+      S = S \ {j}
+  if b:
+    for every j in S:
+      A[i] = f
+      S = S \ {j}
+               Max-min fairness: running example
+C = 10 # resource capacity
+S = {J1, J2, J3} # set of N jobs
+D = [8, 6, 2] # demand vector; D[i]: demand of job i
+A = [0, 0, 0] # allocation vector; A[i], allocation of job i
+while (S != empty):
+  f = C/|S| # fair share                   C =8                                       10
+  b = true # no job in S has demand < f    S = {}
+  for every j in S:                        D [ 1 ] = 8, D [ 2 ] = 6 , D [ 3 ] = 2   A[1] = 4
+    if D[i] <= f                           f= 4
+      b = false                            b = true                                 A[2] = 4
+                                           A[1] = 4
+      A[i] = D[i]
+                                           A[2] = 4
+      C = C – D[i]                                                                  A[3] = 2
+      S = S \ {j}
+  if b:
+    for every j in S:
+      A[i] = f
+      S = S \ {j}
+                       Lottery scheduling
+
+• An approximation of weighted fair sharing
+   • Weight → number of tickets
+   • Scheduling decision → probabilistic: give a slot to a process
+     proportionally to its weight
+Lottery scheduling: simple mechanism
+
+
+        10    • 𝑁𝑡𝑖𝑐𝑘𝑒𝑡 = Σ Ni
+              • Pick a number 𝑑 in 1.. 𝑁𝑡𝑖𝑐𝑘𝑒𝑡 as the
+                random “dart”
+              • Jobs record their Ni of allocated
+                tickets
+              • Order them by Ni
+              • Select the first j such that Σ Ni up to
+        1
+                j exceeds d.
+            Lottery scheduling example (cont.)
+
+• Lottery Scheduling Example
+   • Assume short jobs get 10 tickets, long jobs get 1 ticket
+            # short jobs/     % of CPU each      % of CPU each
+             # long jobs      short jobs gets    long jobs gets
+                  1/1             91%                     9%
+                  0/2             N/A                    50%
+                  2/0             50%                    N/A
+                 10/1             9.9%                  0.99%
+                 1/10             50%                     5%
+   • What if too many short jobs to give reasonable response time?
+      • If load average is 100, hard to make progress
+      • One approach: log some user out
+Weighted fair queueing
+
+
+
+
+                         40
+Fair queueing: max-min fairness originated in networking
+
+ • Fair queueing explained in a fluid flow system: link (resource)
+   allocated in arbitrary small quanta
+    • Each flow receives min(ri , f) , where
+       • ri – flow arrival rate
+       • f – link fair rate (see next slide)
+ • Weighted Fair Queueing (WFQ) – associate a weight with each
+   flow [Demers, Keshav & Shenker ’89]
+     • In networking, a fluid flow system reduces to bit-by-bit round robin
+ • WFQ in a fluid flow system → Generalized Processor Sharing
+   (GPS) [Parekh & Gallager ’92]
+                       Fair rate computation
+
+• If link congested, compute f such that
+
+                          This is the same value as
+                          computed by max-min fair
+                          algorithm
+
+
+                  # min(𝑟𝑖 , 𝑓 ) = 𝐶
+                   !
+             8           10                       f = 4:
+                                        4
+             6                          4         min(8, 4) = 4
+                                        2         min(6, 4) = 4
+             2
+                                                  min(2, 4) = 2
+                        Fair rate computation
+
+• Associate a weight wi with each flow i
+• If link congested, compute f such that
+
+
+
+                ! min(𝑟𝑖 , 𝑓 ) 𝑤" ) = 𝐶
+                    "
+      (w1 = 3) 8          10               f = 2:
+                                   4       min(8, 2*3) = 6
+     (w2 = 1) 6                    4
+                                   2       min(6, 2*1) = 2
+       (w3 = 1) 2
+                                           min(2, 2*1) = 2
+                       Fluid flow system
+
+• Flows can be served one bit at a time
+   • Fluid flow system, also known as Generalized Processor Sharing
+     (GPS) [Parekh and Gallager ‘93]
+• WFQ can be implemented using bit-by-bit weighted round robin
+  in GPS model
+    • During each round from each flow that has data to send, send a
+      number of bits equal to the flow’s weight
+         Generalized processor sharing example
+
+• Red session has packets
+  backlogged between 0 and 10                  link
+   • Other sessions have packets
+     continuously backlogged
+• Each packet has size 1       flows
+
+• Link capacity is 1                   5   1          1   1   1    1
+
+
+
+
+  0       2        4       6       8       10                 15
+             Generalized processor sharing example
+
+• Red session has packets
+  backlogged between 0 and 10                                link
+   • Other sessions have packets
+     continuously backlogged
+• Each packet has size 1                     flows
+     Each
+• Link    vertical column
+        capacity      is 1is a round, in our         5   1          1   1   1    1
+      case, 10 bits (5, 1, 1, 1, 1, 1)
+
+
+
+
+  0            2              4          6       8       10                 15
+               Packet approximation of GPS
+
+• Emulate GPS
+• Select packet that finishes first in GPS assuming that there are
+  no future arrivals
+                Approximating GPS with WFQ
+
+• Fluid GPS system service order
+
+
+
+   0            2            4             6        8   10
+
+
+• Weighted Fair Queueing
+   • Select the first packet that finishes in GPS
+                     Example: each flow has weight 1
+             Packet arrival times
+Flow 1       Each packet has size = 1                                        time
+Flow 2
+             Link capacity = 1
+                                                                             time
+Flow 3
+                                                                             time
+Flow 4
+                                                                             time
+             ε
+                                  Finish times computed at time 0
+         0
+
+
+
+                                                                             time
+         0       1     2    3           Finish times re-computed at time ε
+
+
+
+
+                                                                             time
+         0       1     2    3    4
+                    Solution: virtual time
+
+• Key observation: while the finish times of packets may change
+  when a new packet arrives…
+   • The order in which packets finish doesn’t!
+   • Only the order is important for scheduling
+• Solution: instead of the packet finish time maintain the number
+  of rounds needed to send the remaining bits of the packet
+  (virtual finishing time)
+    • Virtual finishing time doesn’t change when the packet arrives
+• System virtual time – index of the round in the bit-by-bit round
+  robin scheme
+                    System virtual time: V(t)
+
+• Measure service, instead of time
+• V(t) slope – normalized rate at which every backlogged flow
+  receives service in the fluid flow system
+    • C = link capacity
+    • N(t) = total weight of backlogged flows in fluid flow system at time t
+
+  V(t)
+
+
+                                                    𝜕𝑉 𝑡    𝐶
+                                                         =
+                                                     𝜕t    𝑁 𝑡
+
+
+                                                                  time
+                    System virtual time (V(t)): Example
+
+• V(t) increases inversely proportionally to the sum of the weights
+  of the backlogged flows
+                                                            Packet arrival:
+                                                            height proportional
+                                                            to packet size
+
+
+Flow 1 (w1 = 1)                                                                   time
+Flow 2 (w2 = 1)                                                                   time
+                                     3                  4              5
+                     1       2   1       2          3       4      5       6
+
+             V(t)                            C /2
+                         C
+                      Fair queueing implementation
+
+    • Define
+       • 𝐹&' virtual finishing time of packet k of flow i
+       • a'& arrival time of packet k of flow i
+       • L'& length of packet k of flow i
+                                                      Round when last
+       • 𝑤& weight of flow I                C urrent   packet of flow i
+                                              round        finishes
+    • The finishing time of packet
+      k+1 of flow i is                                                # of rounds it takes
+                                                                         to serve new
+                                                                      packet (i.e., packet
+                   k+1                  k+1       k     k+1
+                 Fi      = max(V(ai ), Fi )+ Li / wi                     k+1 of flow i)
+
+
+Round by which
+ packet k+1 is
+    served
+Early Eligible Virtual Deadline First (EEVDF)
+
+
+
+
+                                https://www.kernel.org/doc/html/next/scheduler/sched-eevdf.html
+        What problem does EEVDF try to solve?
+
+• Minimize lag: the difference between service received in real
+  system vs fluid flow (idealized) system
+   • Fluid system service order
+
+
+
+   0          2           4             6                 8               10
+                                                                    Lag: -2.5 (worst case
+                                   Fluid system: red flow got 2.5
+                                                                    O(n) where n is the
+                                   Real system: red flow got 5
+                                                                    number of
+  • Weighted Fair Queueing                                          processes/flows)
+
+
+
+
+   0          2           4             6                 8               10
+                       Why is this bad?
+
+• Minimize lag: the difference between service received in real
+  system vs fluid flow (idealized) system
+   • Fluid system service order
+
+
+
+   0          2           4                  6            8              10
+                          Red flow has 1/2 of resource capacity but can be denied
+                          service for n slots!
+  • Weighted Fair Queueing
+
+
+
+
+   0          2           4               6               8             10
+                             We want this!
+
+• Minimize lag: the difference between service received in real
+  system vs fluid flow (idealized) system
+   • Fluid system service order
+
+
+
+   0          2                 4                 6             8   10
+                  This is what we want: the red flow has half
+                  of resource so it should get every other
+                  quanta (send one packet every other one)
+
+
+
+
+   0          2                 4                6              8   10
+                         We want this!
+
+• Minimize lag: the difference between service received in real
+  system vs fluid flow (idealized) system
+   • Fluid system service order
+
+
+
+   0          2           4             6           8           10
+
+                           Lag <= 0.5 (independent on number of flows)!
+
+
+
+
+   0          2           4             6           8           10
+                                           How?
+
+• Schedule only the processes/packets that are eligible in fluid
+  flow system, i.e., packets with virtual starting time smaller than
+  virtual time
+    • Fluid system service order
+
+
+
+   0                   2                4                6                8              10
+       Only first of the red packets is eligible and has earliest deadline among all eligible
+       packets so schedule it
+   • Weighted Fair Queueing
+
+
+
+   0                 2                 4                 6               8              10
+                                         How?
+
+• Schedule only the processes/packets that are eligible in fluid
+  flow system, i.e., packets with virtual starting time smaller than
+  virtual time
+    • Fluid system service order
+
+
+
+   0             2                  4                   6                 8        10
+          No red packet is eligible (so pick another packet, e.g., black packet)
+
+   • Weighted Fair Queueing
+
+
+
+   0             2                  4                   6                 8        10
+                                       How?
+
+• Schedule only the processes/packets that are eligible in fluid
+  flow system, i.e., packets with virtual starting time smaller than
+  virtual time
+    • Fluid system service order
+
+
+
+   0           2                  4                  6                 8                10
+                   Second red packet is eligible and has earliest deadline, so schedule it
+
+   • Weighted Fair Queueing
+
+
+
+   0           2                  4                  6                 8                10
+                               How?
+
+• Schedule only the processes/packets that are eligible in fluid
+  flow system, i.e., packets with virtual starting time smaller than
+  virtual time
+    • Fluid system service order
+
+
+
+   0           2           4            6            8          10
+                           Lag <= 0.5 (independent on number of flows)!
+   • Weighted Fair Queueing
+
+
+
+   0           2           4            6            8          10
+             Comparison of proportional share disciplines
+
+   • n: number of flows / processes / users
+   • q: length of max time quanta
+               Missing the     Service lag     Schedulin   C o m m e n ts
+               deadline in     to fluid        g
+               fluid flow      flow            complexi
+               system          systems         ty
+Fair           q               O(n)*q          O(log(n))   - For networking q is m ax packet size
+sharing /                                                  - Data structure: priority queue
+queueing                                                     ordered by finishing virtual time
+
+EEVDF          q               O (1)*q         O(log(n))   More com plex data structure
+Lottery        O(\sqrt(n))*q   O(\sqrt(n))*q   O (1 )
+scheduling
+
+Round robin q                  O(n)*q          O(n)        - If only one flow has packets to
+                                                             send, it takes O(n) to c h e c k
+                                                             every e m p ty queue
+                                                           - Hard to handle diff. size time quanta
+                             Conclusion
+
+• Max-min fairness
+   • Each job gets its “fair share”
+   • Provides isolation: a job is guaranteed its fair share
+• Weighted fair sharing:
+   • A way to provide priorities: give higher weights to higher priority jobs
+   • Avoid starvation: as long as a job has a non-negative weight it will
+     get service
+• Various implementations trading between complexity, accuracy,
+  efficiency:
+   • Fair sharing, Lottery scheduling, EEVDF
+                    Reading for next lecture
+• Operating System Concepts:
+  • Chapter 5.5, 5.6, 8 (5.1-5.3 if you want to review today’s content)
+
+
+
+
+                                                                          65
+Thanks
+

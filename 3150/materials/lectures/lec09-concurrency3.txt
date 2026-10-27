@@ -1,0 +1,1967 @@
+             Operating Systems
+                 Lecture 9
+          Synchronization:
+       semaphores and monitors
+
+                   Prof. Yunming XIAO
+                  School of Data Science
+
+
+
+
+Acknowledgments: Ion Stoica and Matei Zaharia, Berkeley CS 162
+              Higher-level primitives than locks
+• Goal of last couple of lectures:
+   • What is right abstraction for synchronizing threads that share memory?
+   • Want as high-level a primitive as possible
+
+
+• Synchronization is a way of coordinating multiple concurrent
+  activities that are using shared state
+   • This lecture and the next present some ways of structuring sharing
+
+
+
+
+                                                                              2
+ Recall: simple locks with test&set atomic instruction
+• Simple lock that doesn’t require entry into the kernel
+
+  // Storage: just a memory location in userspace; 0 means “unlocked”
+  int mylock = 0;     // Interface: acquire(&mylock);
+                      //            release(&mylock);
+
+
+  acquire(int *thelock) {
+      while (test&set(thelock));      // Atomic operation!
+  }
+
+
+  release(int *thelock) {
+      *thelock = 0;                   // Atomic operation!
+  }
+
+
+
+
+                                                                        3
+                Better locks using test&set
+• Idea: only busy-wait to atomically check lock value
+  int guard = 0; // Global Variable!
+  int mylock = FREE; // Interface: acquire(&mylock);
+                     //            release(&mylock);
+
+  acquire(int *thelock) {            release(int *thelock) {
+    // Short busy-wait time            // Short busy-wait time
+    while (test&set(guard));           while (test&set(guard));
+    if (*thelock == BUSY) {            if anyone on wait queue {
+      put thread on wait queue;          take thread off wait queue
+      go to sleep() & guard = 0;         Place on ready queue;
+      // guard == 0 on wakeup!         } else {
+    } else {                             *thelock = FREE;
+      *thelock = BUSY;                 }
+      guard = 0;                       guard = 0;
+    }                                }
+  }
+                                                                      4
+  Linux futex: interface to kernel sleep functionality
+              #include <linux/futex.h>
+              #include <sys/time.h>
+
+              int futex(int *uaddr, int futex_op, int val,
+                          const struct timespec *timeout);
+
+
+• uaddr points to a 32-bit value in user space
+• futex_op
+   • FUTEX_WAIT – if *uaddr == val, sleep till FUTEX_WAKE
+      • Atomic check that condition still holds after we disable interrupts (in kernel!)
+   • FUTEX_WAKE – wake up at most val waiting threads
+   • FUTEX_WAKE_OP, FUTEX_LOCK_PI, FUTEX_CMP_REQUEUE: More
+     interesting operations!
+• timeout
+   • ptr to a timespec structure that specifies a timeout for the op
+                                                                                           5
+       Producer-consumer with a bounded buffer
+• Problem Definition                             Producer   Buffer   Consumer
+                                                                      Consumer
+  • Producer(s) put things into a shared buffer                        Consumer
+
+  • Consumer(s) take them out
+  • Need synchronization to coordinate producer/consumer
+
+• Don’t want producer and consumer to have to work in lockstep,
+  so put a fixed-size buffer between them
+  • Need to synchronize access to this buffer
+  • Producer needs to wait if buffer is full
+  • Consumer needs to wait if buffer is empty
+
+
+
+
+                                                                                  6
+     Circular buffer data structure (sequential case)
+typedef struct buf {                            w
+  int write_index;                              r
+  int read_index;
+  <type> *entries[BUFSIZE];                         di    di di+
+} buf_t;                                            +2      1
+
+
+
+
+• Insert: write & bump write ptr (enqueue)
+• Remove: read & bump read ptr (dequeue)
+• How to tell if full (on insert) or empty (on remove)?
+• And what do you do if it is?
+• What needs to be atomic?
+
+                                                                   7
+                        Circular buffer – first cut
+Mutex buf_lock = <initially unlocked>
+
+
+Producer(item) {
+    acquire(&buf_lock);
+    while (buffer full) {};    // Wait for a free slot
+    enqueue(item);
+    release(&buf_lock);
+}
+                                          • Will we ever come out
+Consumer() {                                of the wait loop?
+    acquire(&buf_lock);
+    while (buffer empty) {};
+    item = dequeue();
+    release(&buf_lock);
+    return item;
+}
+                                                                    8
+                     Circular buffer – second cut
+Mutex buf_lock = <initially unlocked>
+
+
+Producer(item) {
+    acquire(&buf_lock);
+    while (buffer full) { release(&buf_lock); acquire(&buf_lock); }
+    enqueue(item);
+    release(&buf_lock);                 • What happens when one is waiting
+}                                         for the other?
+                                           • Multiple cores?
+Consumer() {                               • Single core?
+    acquire(&buf_lock);
+    while (buffer empty) { release(&buf_lock); acquire(&buf_lock); };
+    item = dequeue();
+    release(&buf_lock);
+    return item;
+}
+                                                                             9
+                           Semaphores
+• Semaphores are a type of generalized lock
+
+• First defined by Dijkstra in late 60s
+
+• Main synchronization primitive in original UNIX
+
+
+
+
+                                                    10
+                           Semaphores
+• A Semaphore has a non-negative integer value and supports
+  the following operations:
+
+  • Set value when you initialize
+
+  • Down() or P(): an atomic operation that waits for semaphore to
+    become positive, then decrements it by 1
+
+  • Up() or V(): an atomic operation that increments the semaphore
+    by 1, waking up a waiting P, if any
+
+
+
+
+                                                                     11
+           Semaphores like integers except…
+• Semaphores are like integers, except:
+
+  • No negative values
+
+  • Only operations allowed are P and V – can’t read or write value,
+    except initially
+
+  • Operations must be atomic
+     • Two P’s together can’t decrement value below zero
+     • Thread going to sleep in P won’t miss wakeup from V – even if both
+       happen at the same time
+
+
+
+                                                                            12
+                   Two uses of semaphores
+• Mutual Exclusion (initial value = 1)
+
+• Also called “Binary Semaphore” or “mutex”.
+
+• Can be used for mutual exclusion, just like a lock:
+
+
+                    semaP(&mysem);
+                    // Critical section goes here
+                    semaV(&mysem);
+
+
+
+
+                                                        13
+                Two uses of semaphores
+• Scheduling constraints (initial value = 0)
+• Allow thread 1 to wait for a signal from thread 2
+    • thread 2 schedules thread 1 when a given event occurs
+• Suppose you had to implement ThreadJoin which must wait for
+  thread to terminate
+
+               // Initial value of semaphore = 0
+               ThreadJoin {
+                 semaP(&mysem);
+               }
+               ThreadFinish {
+                 semaV(&mysem);
+               }
+                                                                14
+Bounded buffer: correctness constraints for solution
+• Correctness constraints:
+
+  • Consumer must wait for producer to fill buffers, if none full
+    (scheduling constraint)
+
+
+  • Producer must wait for consumer to empty buffers, if all full
+    (scheduling constraint)
+
+
+  • Only one thread can manipulate buffer queue at a time (mutual
+    exclusion)
+
+
+
+
+                                                                    15
+Bounded buffer: correctness constraints for solution
+• General rule of thumb: use a separate semaphore for each
+  constraint
+
+  • Semaphore full_buffers;      // consumer’s constraint
+  • Semaphore empty_buffers;     // producer’s constraint
+  • Semaphore mutex;             // mutual exclusion
+
+
+
+
+                                                             16
+                    Let’s drink coke!
+Semaphore full_slots = 0;        // Initially, no coke
+Semaphore empty_slots = buf_size; // Initially, num empty slots
+Semaphore mutex = 1;             // No one using machine
+
+Producer(item) {
+  semaP(&empty_slots);           // Wait until space
+
+
+
+
+}
+Consumer() {
+  semaP(&full_slots);            // Check if there’s a coke
+
+
+
+
+}
+                                                                  17
+                        Let’s drink coke!
+Semaphore full_slots = 0;        // Initially, no coke
+Semaphore empty_slots = buf_size; // Initially, num empty slots
+Semaphore mutex = 1;             // No one using machine
+
+Producer(item) {
+  semaP(&empty_slots);           // Wait until space
+
+    enqueue(item);
+
+
+
+}
+Consumer() {
+  semaP(&full_slots);            // Check if there’s a coke
+
+    item = dequeue();
+
+
+
+
+}
+                                                                  18
+                        Let’s drink coke!
+Semaphore full_slots = 0;        // Initially, no coke
+Semaphore empty_slots = buf_size; // Initially, num empty slots
+Semaphore mutex = 1;             // No one using machine
+
+Producer(item) {
+  semaP(&empty_slots);           // Wait until space
+
+    enqueue(item);
+
+    semaV(&full_slots);          // Tell consumers there is more coke
+}
+Consumer() {
+  semaP(&full_slots);            // Check if there’s a coke
+
+    item = dequeue();
+
+    semaV(&empty_slots);         // Tell producer need more
+    return item
+}
+                                                                        19
+                    Let’s drink coke!
+Semaphore full_slots = 0;        // Initially, no coke
+Semaphore empty_slots = buf_size; // Initially, num empty slots
+Semaphore mutex = 1;             // No one using machine
+
+Producer(item) {
+  semaP(&empty_slots);           // Wait until space
+  semaP(&mutex);                 // Wait until machine free
+  enqueue(item);
+  semaV(&mutex);
+  semaV(&full_slots);            // Tell consumers there is more coke
+}
+Consumer() {
+  semaP(&full_slots);            // Check if there’s a coke
+  semaP(&mutex);                 // Wait until machine free
+  item = dequeue();
+  semaV(&mutex);
+  semaV(&empty_slots);           // Tell producer need more
+  return item
+}
+                                                                        20
+                                 Let’s drink coke!
+           Semaphore full_slots = 0;        // Initially, no coke
+           Semaphore empty_slots = buf_size; // Initially, num empty slots
+           Semaphore mutex = 1;             // No one using machine
+
+             Producer(item) {
+               semaP(&empty_slots);             // Wait until space
+               semaP(&mutex);                   // Wait until machine free
+               enqueue(item);
+               semaV(&mutex);
+               semaV(&full_slots);              // Tell consumers there is   Critical sections
+             }                                  // more coke                 using mutex
+             Consumer() {             full_slots signal space                protect integrity
+               semaP(&full_slots);              // Check if there’s a coke   of the queue
+               semaP(&mutex);                   // Wait until machine free
+               item = dequeue();
+               semaV(&mutex);
+               semaV(&empty_slots);             // Tell producer need more
+empty_slots    return item
+signal space }
+                                                                                             21
+                 Discussion about solution
+• Why asymmetry?
+
+  • Producer does: semaP(&empty_buffer), semaV(&full_buffer)
+
+  • Consumer does: semaP(&full_buffer), semaV(&empty_buffer)
+
+
+  • Does order matter? What if we decrement mutex before
+    full/empty_buffer?
+
+
+
+
+                                                               22
+                    Let’s drink coke!
+Semaphore full_slots = 0;        // Initially, no coke
+Semaphore empty_slots = buf_size; // Initially, num empty slots
+Semaphore mutex = 1;             // No one using machine
+
+Producer(item) {
+  semaP(&mutex);                 // Wait until machine free
+  semaP(&empty_slots);           // Wait until space
+  enqueue(item);
+  semaV(&full_slots);            // Tell consumers there is more coke
+  semaV(&mutex);
+}
+Consumer() {
+  semaP(&mutex);                 // Wait until machine free
+  semaP(&full_slots);            // Check if there’s a coke
+  item = dequeue();
+  semaV(&empty_slots);           // Tell producer need more
+  semaV(&mutex);
+  return item
+}
+                                                                        23
+                    Let’s drink coke!
+Semaphore full_slots = 0;        // Initially, no coke
+Semaphore empty_slots = buf_size; // Initially, num empty slots
+Semaphore mutex = 1;             // No one using machine
+
+Producer(item) {
+  semaP(&empty_slots);           // Wait until space
+  semaP(&mutex);                 // Wait until machine free
+  enqueue(item);
+  semaV(&full_slots);            // Tell consumers there is more coke
+  semaV(&mutex);
+}
+Consumer() {
+  semaP(&full_slots);            // Check if there’s a coke
+  semaP(&mutex);                 // Wait until machine free
+  item = dequeue();
+  semaV(&empty_slots);           // Tell producer need more
+  semaV(&mutex);
+  return item
+}
+                                                                        24
+                 Semaphores are good but…
+• Semaphores are a huge step up; just think of trying to do the
+  bounded buffer with only loads and stores or even with locks!
+
+• Problem is that semaphores are dual purpose:
+  • They are used for both mutex and scheduling constraints
+  • Example: the fact that flipping of P’s in bounded buffer gives deadlock is
+    not immediately obvious. How do you prove correctness to someone?
+
+
+
+
+                                                                                 25
+End of recall
+      Where are we going with synchronization?
+
+
+       Programs   Shared Programs
+
+      Higher-level Locks        Semaphores
+          API      Monitors     Send/Receive
+
+                  Load/Store   Disable Ints
+       Hardware
+                  Test&Set     Compare&Swap
+
+
+• We are going to implement various higher-level synchronization
+  primitives using atomic operations
+
+
+                                                                   27
+Monitors
+
+
+
+
+           28
+           Monitors: an even nicer abstraction!
+• Use locks for mutual exclusion and condition variables for
+  scheduling constraints
+
+• Monitor: a lock and zero or more condition variables for
+  managing concurrent access to shared data
+
+• A monitor is a paradigm for concurrent programming
+  • Some languages, like Java, provide them natively
+  • Others use actual locks and condition var objects
+
+
+
+
+                                                               29
+                      Condition variables
+• A queue of threads waiting for something (a condition) inside a
+  critical section
+
+• Key idea: allow going to sleep inside the critical section by
+  atomically releasing lock at time we go to sleep
+
+• Contrast to semaphores: can’t wait inside critical section
+
+
+
+
+                                                                    30
+                      Condition variables
+• Operations on condition variables:
+   • Wait(&lock): Atomically release lock and go to sleep. Re-acquire
+     lock later, when returning from sleep.
+   • Signal(): Wake up one waiter, if any exists.
+   • Broadcast(): Wake up all waiters.
+
+
+• Rule: must hold lock when doing condition variable ops!
+
+
+
+
+                                                                        31
+              Monitor with condition variables
+• Lock: the lock provides mutual exclusion to shared data
+  • Always acquire before accessing shared data structures
+  • Always release after finishing with shared data
+  • Lock is initially free
+
+
+• Condition variable: a queue of threads waiting for something
+  inside a critical section
+  • Key idea: make it possible to go to sleep inside critical section by
+    atomically releasing lock as we go to sleep
+
+
+
+
+                                                                           32
+Infinite synchronized buffer (with condition variable)
+   lock buf_lock;            // Initially unlocked
+   condition buf_CV;         // Initially empty
+   queue queue;              // Actual queue!
+
+
+
+
+                                                         33
+Infinite synchronized buffer (with condition variable)
+   lock buf_lock;             // Initially unlocked
+   condition buf_CV;          // Initially empty
+   queue queue;               // Actual queue!
+
+   Producer(item) {
+     acquire(&buf_lock);      // Get Lock
+     enqueue(&queue, item);   // Add item
+     cond_signal(&buf_CV);    // Signal any waiters
+     release(&buf_lock);      // Release Lock
+   }
+
+
+
+
+                                                         34
+Infinite synchronized buffer (with condition variable)
+   lock buf_lock;                    // Initially unlocked
+   condition buf_CV;                 // Initially empty
+   queue queue;                      // Actual queue!
+
+   Producer(item) {
+     acquire(&buf_lock);             // Get Lock
+     enqueue(&queue, item);          // Add item
+     cond_signal(&buf_CV);           // Signal any waiters
+     release(&buf_lock);             // Release Lock
+   }
+
+   Consumer() {
+     acquire(&buf_lock);              // Get Lock
+     if (is_empty(&queue)) {
+       cond_wait(&buf_CV, &buf_lock); // If empty, sleep
+     }
+     item = dequeue(&queue);          // Get next item
+     release(&buf_lock);              // Release lock
+     return(item);
+   }
+                                                             35
+Infinite synchronized buffer (with condition variable)
+   lock buf_lock;                    // Initially unlocked
+   condition buf_CV;                 // Initially empty
+   queue queue;                      // Actual queue!
+
+   Producer(item) {
+     acquire(&buf_lock);             // Get Lock
+     enqueue(&queue, item);          // Add item
+     cond_signal(&buf_CV);           // Signal any waiters
+     release(&buf_lock);             // Release Lock
+   }
+
+   Consumer() {
+     acquire(&buf_lock);              // Get Lock
+     while (is_empty(&queue)) {
+       cond_wait(&buf_CV, &buf_lock); // If empty, sleep
+     }
+     item = dequeue(&queue);          // Get next item
+     release(&buf_lock);              // Release lock
+     return(item);
+   }
+                                                             36
+                    Mesa vs. Hoare monitors
+• Need to be careful about precise definition of signal and wait
+          while (is_empty(&queue)) {
+             cond_wait(&buf_CV, &buf_lock); // If empty, sleep
+           }
+         item = dequeue(&queue);            // Get next item
+
+
+• Why didn’t we do this?
+          if (is_empty(&queue)) {
+             cond_wait(&buf_CV, &buf_lock); // If empty, sleep
+           }
+         item = dequeue(&queue);            // Get next item
+
+• Answer: depends on the type of scheduling
+  • Mesa-style: named after Xerox-Parc Mesa Operating System
+     • Most OSes use Mesa scheduling
+  • Hoare-style: named after British logician Tony Hoare
+                                                                   37
+                         Hoare monitors
+• Signaler gives up lock, CPU to waiter; waiter runs immediately
+• Then, waiter gives up lock, processor back to signaler when it
+  exits critical section or if it waits again
+       …                                   acquire(&buf_lock);
+       acquire(&buf_lock);                 …
+       …                                   if (isEmpty(&queue)) {
+       cond_signal(&buf_CV);                 cond_wait(&buf_CV,&buf_lock);
+       …                                   }
+       release(&buf_lock);                 …
+                                           release(&buf_lock);
+
+
+
+• At first glance, this seems like good semantics
+• Waiter gets to run immediately, condition is still correct!
+                                                                             38
+                           Mesa monitors
+• Signaler keeps lock and processor
+• Waiter placed on ready queue with no special priority
+                            Put waiting thread
+                            on ready queue
+        …                                        acquire(&buf_lock);
+        acquire(&buf_lock);                      …
+        …                                        while (isEmpty(&queue)) {
+        cond_signal(&buf_CV);                      cond_wait(&buf_CV,&buf_lock);
+        …                                        }
+        release(&buf_lock);                      …
+                                                 release(&buf_lock);
+
+
+
+• Practically, need to check condition again after wait
+   • By the time the waiter gets scheduled, condition may be false again
+   • so, just check again with the “while” loop
+                                                                                   39
+           Bounded buffer with monitor
+lock buf_lock = <initially unlocked>
+condition is_not_empty = <initially empty>
+condition is_not_full = <initially empty>
+
+
+
+
+                                             40
+           Bounded buffer with monitor
+lock buf_lock = <initially unlocked>
+condition is_not_empty = <initially empty>
+condition is_not_full = <initially empty>
+
+Producer(item) {
+  acquire(&buf_lock);
+  while (buffer full) { cond_wait(&is_not_full, &buf_lock); }
+  enqueue(item);
+  cond_signal(&is_not_empty);
+  release(&buf_lock);
+}
+
+
+
+
+                                                                41
+           Bounded buffer with monitor
+lock buf_lock = <initially unlocked>
+condition is_not_empty = <initially empty>
+condition is_not_full = <initially empty>
+
+Producer(item) {
+  acquire(&buf_lock);
+  while (buffer full) { cond_wait(&is_not_full, &buf_lock); }
+  enqueue(item);
+  cond_signal(&is_not_empty);
+  release(&buf_lock);
+}
+
+Consumer() {
+  acquire(buf_lock);
+  while (buffer empty) { cond_wait(&is_not_empty, &buf_lock); }
+  item = dequeue();
+  cond_signal(&is_not_full);
+  release(buf_lock);
+  return item;
+}
+                                                                  42
+                  Again, why the while loop?
+• MESA semantics
+
+• For most operating systems, when a thread is woken up by
+  signal(), it is simply put on the ready queue
+
+• It may or may not reacquire the lock immediately!
+    • Another thread could be scheduled first and "sneak in" to empty
+      the queue
+    • Need a loop to re-check condition on wakeup
+
+
+• Is this busy waiting?
+
+                                                                        43
+       Basic structure of Mesa monitor program
+• Monitors represent the synchronization logic of the program
+  • Wait if necessary
+  • Signal when change something so any waiting threads can proceed
+     lock
+     while (need to wait) {           Check and/or update
+       condvar.wait();                state variables
+     }                                Wait if neccessary
+     unlock
+
+     do something so need to wait
+
+     lock
+                                      Check and/or update
+     condvar.signal();
+                                      state variables
+     unlock
+
+
+                                                                      44
+                  Readers/writers problem
+                          W
+
+                                                R
+                           R
+                                            R
+
+
+
+• Motivation: consider a shared database
+   • Two classes of users:
+     • Readers – never modify database
+     • Writers – read and modify database
+  • Is using a single lock on the whole database sufficient?
+     • Like to have many readers at the same time
+     • Only one writer at a time
+                                                               45
+                  Basic readers/writers solution
+• Correctness Constraints:
+   • Readers can access database when no writers
+   • Writers can access database when no readers or writers
+   • Only one thread manipulates state variables at a time
+
+
+• Basic structure of a solution:
+   • Reader()
+      Wait until no writers
+      Access database
+      Check out – wake up a waiting writer
+   • Writer()
+      Wati until no active readers or writers
+      Access databases
+      Check out – wake up waiting readers or writer
+                                                              46
+               Basic readers/writers solution
+• State variables (Protected by a lock called “lock”):
+   • int AR: Number of active readers; initially = 0
+   • int WR: Number of waiting readers; initially = 0
+   • int AW: Number of active writers; initially = 0
+   • int WW: Number of waiting writers; initially = 0
+   • Condition ok_to_read = NIL
+   • Condition ok_to_write = NIL
+
+
+
+
+                                                         47
+                      Code for a reader
+Reader() {
+  // First check self into system
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                48
+                       Code for a writer
+Writer() {
+  // First check self into system
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                   49
+          Simulation of readers/writers solution
+• Use an example to simulate the solution
+
+• Consider the following sequence of operators:
+  • R1, R2, W1, R3
+
+
+• Initially: AR = 0, WR = 0, AW = 0, WW = 0
+
+
+
+
+                                                   50
+        Simulation of readers/writers solution
+Reader() {                           R1 comes alone (no waiting threads)
+  // First check self into system    AR = 0, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                           51
+        Simulation of readers/writers solution
+Reader() {                           R1 comes alone (no waiting threads)
+  // First check self into system    AR = 0, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                           52
+        Simulation of readers/writers solution
+Reader() {                           R1 comes alone (no waiting threads)
+  // First check self into system    AR = 1, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                           53
+        Simulation of readers/writers solution
+Reader() {                           R1 comes alone (no waiting threads)
+  // First check self into system    AR = 1, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                           54
+        Simulation of readers/writers solution
+Reader() {                           R1 comes alone (no waiting threads)
+  // First check self into system    AR = 1, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                           55
+        Simulation of readers/writers solution
+Reader() {                           R2 comes alone (R1 accessing database)
+  // First check self into system    AR = 1, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                              56
+        Simulation of readers/writers solution
+Reader() {                           R2 comes alone (R1 accessing database)
+  // First check self into system    AR = 1, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                              57
+        Simulation of readers/writers solution
+Reader() {                           R2 comes alone (R1 accessing database)
+  // First check self into system    AR = 2, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                              58
+        Simulation of readers/writers solution
+Reader() {                           R2 comes alone (R1 accessing database)
+  // First check self into system    AR = 2, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                              59
+        Simulation of readers/writers solution
+Reader() {                             R2 comes alone (R1 accessing database)
+  // First check self into system      AR = 2, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {            // Is it safe to read?
+    WR++;                            // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                            // No longer waiting
+  }
+  AR++;                              // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                              // No longer active
+  if (AR == 0 && WW > 0)             // No other active readers
+           Assume readers take a while
+    cond_signal(&ok_to_write);            to access
+                                     // Wake  up one database
+                                                     writer
+             Situation: locks released, only AR is non-zero
+  release(&lock);
+}
+                                                                                60
+        Simulation of readers/writers solution
+Writer() {                          W1 comes alone (R1&R2 accessing database)
+  // First check self into system   AR = 2, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                           61
+        Simulation of readers/writers solution
+Writer() {                          W1 comes alone (R1&R2 accessing database)
+  // First check self into system   AR = 2, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                           62
+        Simulation of readers/writers solution
+Writer() {                          W1 comes alone (R1&R2 accessing database)
+  // First check self into system   AR = 2, WR = 0, AW = 0, WW = 1
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                           63
+        Simulation of readers/writers solution
+Writer() {                          W1 comes alone (R1&R2 accessing database)
+  // First check self into system   AR = 2, WR = 0, AW = 0, WW = 1
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                           64
+        Simulation of readers/writers solution
+Reader() {                           R3 comes alone (R1 & R2 accessing
+  // First check self into system    database, W1 waiting)
+  acquire(&lock);                    AR = 2, WR = 0, AW = 0, WW = 1
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                         65
+        Simulation of readers/writers solution
+Reader() {                           R3 comes alone (R1 & R2 accessing
+  // First check self into system    database, W1 waiting)
+  acquire(&lock);                    AR = 2, WR = 0, AW = 0, WW = 1
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                         66
+        Simulation of readers/writers solution
+Reader() {                           R3 comes alone (R1 & R2 accessing
+  // First check self into system    database, W1 waiting)
+  acquire(&lock);                    AR = 2, WR = 1, AW = 0, WW = 1
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                         67
+        Simulation of readers/writers solution
+Reader() {                           R3 comes alone (R1 & R2 accessing
+  // First check self into system    database, W1 waiting)
+  acquire(&lock);                    AR = 2, WR = 1, AW = 0, WW = 1
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                         68
+        Simulation of readers/writers solution
+Reader() {                            R1 & R2 accessing database, W1 and R3
+  // First check self into system     waiting
+  acquire(&lock);                     AR = 2, WR = 1, AW = 0, WW = 1
+  while ((AW + WW) > 0) {           // Is it safe to read?
+    WR++;                           // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                           // No longer waiting
+  }
+  AR++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                             // No longer active
+  if (AR == 0 && WW > 0)            // No other active readers
+    cond_signal(&ok_to_write);  Status:
+                                    // Wake up one writer
+  • R1  and R2 still reading
+  release(&lock);
+} • W1 and R3 waiting on ok_to_write and ok_to_read, respectively
+                                                                              69
+        Simulation of readers/writers solution
+Reader() {                           R2 finishes (R1 accessing database, W1
+  // First check self into system    and R3 waiting)
+  acquire(&lock);                    AR = 2, WR = 1, AW = 0, WW = 1
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                              70
+        Simulation of readers/writers solution
+Reader() {                           R2 finishes (R1 accessing database, W1
+  // First check self into system    and R3 waiting)
+  acquire(&lock);                    AR = 1, WR = 1, AW = 0, WW = 1
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                              71
+        Simulation of readers/writers solution
+Reader() {                           R2 finishes (R1 accessing database, W1
+  // First check self into system    and R3 waiting)
+  acquire(&lock);                    AR = 1, WR = 1, AW = 0, WW = 1
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                              72
+        Simulation of readers/writers solution
+Reader() {                           R2 finishes (R1 accessing database, W1
+  // First check self into system    and R3 waiting)
+  acquire(&lock);                    AR = 1, WR = 1, AW = 0, WW = 1
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                              73
+        Simulation of readers/writers solution
+Reader() {                           R1 finishes (W1 and R3 waiting)
+  // First check self into system    AR = 1, WR = 1, AW = 0, WW = 1
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                       74
+        Simulation of readers/writers solution
+Reader() {                           R1 finishes (W1 and R3 waiting)
+  // First check self into system    AR = 0, WR = 1, AW = 0, WW = 1
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                       75
+        Simulation of readers/writers solution
+Reader() {                           R1 finishes (W1 and R3 waiting)
+  // First check self into system    AR = 0, WR = 1, AW = 0, WW = 1
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                       76
+        Simulation of readers/writers solution
+Reader() {                           R1 signals a writer (W1 and R3 waiting)
+  // First check self into system    AR = 0, WR = 1, AW = 0, WW = 1
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                               77
+        Simulation of readers/writers solution
+Writer() {                          W1 gets signal (R3 waiting)
+  // First check self into system   AR = 0, WR = 1, AW = 0, WW = 1
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                    78
+        Simulation of readers/writers solution
+Writer() {                          W1 gets signal (R3 waiting)
+  // First check self into system   AR = 0, WR = 1, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                    79
+        Simulation of readers/writers solution
+Writer() {                          W1 gets signal (R3 waiting)
+  // First check self into system   AR = 0, WR = 1, AW = 1, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                    80
+        Simulation of readers/writers solution
+Writer() {                          W1 accessing database (R3 waiting)
+  // First check self into system   AR = 0, WR = 1, AW = 1, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                        81
+        Simulation of readers/writers solution
+Writer() {                          W1 finishes (R3 waiting)
+  // First check self into system   AR = 0, WR = 1, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                    82
+        Simulation of readers/writers solution
+Writer() {                          W1 finishes (R3 waiting)
+  // First check self into system   AR = 0, WR = 1, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                    83
+        Simulation of readers/writers solution
+Writer() {                          W1 finishes (R3 waiting)
+  // First check self into system   AR = 0, WR = 1, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                    84
+        Simulation of readers/writers solution
+Writer() {                          W1 signaling readers (R3 waiting)
+  // First check self into system   AR = 0, WR = 1, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                       85
+         Simulation of readers/writers solution
+Reader() {                           R3 gets signal (no waiting threads)
+  // First check self into system    AR = 0, WR = 1, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                           86
+         Simulation of readers/writers solution
+Reader() {                           R3 gets signal (no waiting threads)
+  // First check self into system    AR = 0, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                           87
+        Simulation of readers/writers solution
+Reader() {                           R3 accessing database (no waiting threads)
+  // First check self into system    AR = 1, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                                  88
+        Simulation of readers/writers solution
+Reader() {                           R3 finishes (no waiting threads)
+  // First check self into system    AR = 1, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                        89
+        Simulation of readers/writers solution
+Reader() {                           R3 finishes (no waiting threads)
+  // First check self into system    AR = 0, WR = 0, AW = 0, WW = 0
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                        90
+                             Questions
+• Can readers starve? Consider Reader() entry code:
+      while ((AW + WW) > 0) {            // Is it safe to read?
+        WR++;                            // No. Writers exit
+        cond_wait(&ok_to_read, &lock);   // Sleep on cond var
+        WR--;                            // No longer waiting
+      }
+      AR++;
+
+
+
+
+• What if we erase the condition check in Reader exit?
+      AR--;                              // No longer active
+      if (AR == 0 && WW > 0)             // No other active readers
+        cond_signal(&ok_to_write);       // Wake up one writer
+
+
+
+
+                                                                      91
+                               Questions
+• Further, what if we turn the signal() into broadcast()?
+       AR--;                              // No longer active
+       cond_broadcast((&ok_to_write)      // Wake up sleepers
+
+
+
+
+• Finally, what if we use only one condition variable (call it
+  “ok_continue”) instead of two separate ones?
+   • Both readers and writers sleep on this variable
+   • Must use broadcast() instead of signal()
+
+
+
+
+                                                                 92
+                      Code for a reader
+Reader() {
+  // First check self into system
+  acquire(&lock);
+  while ((AW + WW) > 0) {          // Is it safe to read?
+    WR++;                          // No. Writers exit
+    cond_wait(&ok_to_read, &lock); // Sleep on cond var
+    WR--;                          // No longer waiting
+  }
+  AR++;                            // Now we are active!
+  release(&lock);
+  // Perform actual read-only access
+  access_database(read_only);
+  // Now, check out of system
+  acquire(&lock);
+  AR--;                            // No longer active
+  if (AR == 0 && WW > 0)           // No other active readers
+    cond_signal(&ok_to_write);     // Wake up one writer
+  release(&lock);
+}
+                                                                93
+                       Code for a writer
+Writer() {
+  // First check self into system
+  acquire(&lock);
+  while ((AW + AR) > 0) {           // Is it safe to read?
+    WW++;                           // No. Writers exit
+    cond_wait(&ok_to_write, &lock); // Sleep on cond var
+    WW--;                           // No longer waiting
+  }
+  AW++;                             // Now we are active!
+  release(&lock);
+  // Perform actual read/write access
+  access_database(read_write);
+  // Now, check out of system
+  acquire(&lock);
+  AW--;                             // No longer active
+  if (WW > 0)                       // Give priority to writers
+    cond_signal(&ok_to_write);      // Wake up one writer
+  else if (WR > 0)                  // Otherwise, wake up readers
+    cond_broadcast(&ok_to_read);    // Wake up all readers
+  release(&lock);
+}                                                                   94
+       Basic structure of Mesa monitor program
+• Monitors represent the synchronization logic of the program
+  • Wait if necessary
+  • Signal when change something so any waiting threads can proceed
+     lock
+     while (need to wait) {           Check and/or update
+       condvar.wait();                state variables
+     }                                Wait if neccessary
+     unlock
+
+     do something so need to wait
+
+     lock
+                                      Check and/or update
+     condvar.signal();
+                                      state variables
+     unlock
+
+
+                                                                      95
+Tips on concurrency coding
+
+
+
+
+                             96
+         C-language support for synchronization
+• Pretty straightforward, just functions to call
+
+• But make sure you know all the code paths out of a critical
+  section!
+        int Rtn() {
+          acquire(&lock);
+          …
+          if (exception) {
+            release(&lock);
+            return errReturnCode;
+          }
+          …
+          release(&lock);
+          return OK;
+        }
+
+                                                                97
+         Concurrency and synchronization in C
+• Harder to track what to release with more locks
+       void Rtn() {
+         lock1.acquire();
+         …
+         if (error) {
+           lock1.release();
+           return;
+         }
+         …
+         lock2.acquire();
+         …
+         if (error) {
+           lock2.release()
+           lock1.release();
+           return;
+         }
+         …
+         lock2.release();
+         lock1.release();
+       }
+                                                    98
+        C-language support for synchronization
+• Languages that support exceptions are problematic (easy to
+  make a non-local exit without releasing lock)
+       void Rtn() {
+         lock.acquire();
+         …
+         DoFoo();
+         …
+         lock.release();
+       }
+
+       void DoFoo() {
+         …
+         if (bad stuff) throw Exception;
+         …
+       }
+
+• An exception in DoFoo() will exit Rtn() without releasing the lock!
+                                                                        99
+         C-language support for synchronization
+• Must catch all exceptions in critical sections
+   • Catch exceptions, release lock, and re-throw exception:
+        void Rtn() {
+          lock.acquire();
+          try {
+          …
+          DoFoo();
+          …
+          } catch (…) {
+            lock.release();
+            throw;
+          }
+        }
+        void DoFoo() {
+          …
+          if (exception) throw Exception;
+          …
+        }
+                                                               100
+        Much better pattern: C++ lock guards
+#include <mutex>
+int global_i = 0;   std::mutex global_mutex;
+
+void safe_increment() {
+  std::lock_guard<std::mutex> lock(global_mutex);
+  …
+  global_i++;
+  // Mutex released in the destructor of “lock”
+}
+
+
+
+
+                                                    101
+                    Python with Keyword
+• More versatile than we show here (can be used to close files,
+  connections, etc.)
+       lock = threading.Lock()
+       …
+       with lock: # Automatically calls acquire()
+         some_var += 1
+         …
+       # release() called however we leave the “with” block
+
+
+
+
+                                                                  102
+                 Java synchronized keyword
+• Every Java object has an associated lock:
+  • Lock is acquired on entry and released on exit from a synchronized method
+  • Lock is properly released if exception occurs inside a synchronized method
+  • s
+       class Account {
+         private int balance;
+         // object constructor
+         public Account (int initialBalance) {
+           balance = initialBalance;
+         }
+         public synchronized int getBalance() {
+           return balance;
+         }
+         public synchronized void deposit(int amount) {
+           balance += amount;
+         }
+       }
+                                                                                 103
+                 Java support for monitors
+• Along with a lock, every object has a single condition variable
+  associated with it
+
+• To wait inside a synchronized method:
+   • void wait();
+   • void wait(long timeout);
+
+
+• To signal while in a synchronized method:
+   • void notify();
+   • void notifyAll();
+
+
+
+
+                                                                    104
+       Where are we going with synchronization?
+
+
+       Programs   Shared Programs
+
+      Higher-level Locks        Semaphores
+          API      Monitors     Send/Receive
+
+                  Load/Store   Disable Ints
+       Hardware
+                  Test&Set     Compare&Swap
+
+
+• Implement various higher-level synchronization primitives using
+  atomic operations
+
+
+                                                                    105
+      Your feedback is welcomed!
+
+
+
+
+• https://forms.cloud.microsoft/r/Q6szydQLXY
+
+                                               106
+Thanks
+

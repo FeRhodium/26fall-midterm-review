@@ -1,0 +1,1072 @@
+             Operating Systems
+                 Lecture 6
+           System programming:
+              sockets, pipes
+
+                   Prof. Yunming XIAO
+                  School of Data Science
+
+
+
+
+Acknowledgments: Ion Stoica and Matei Zaharia, Berkeley CS 162
+           Recall: what’s in an open file description?
+• Inside kernel!
+• For our purpose, the two most
+  important things are:
+    • Where to find the file data on disk
+    • The current position within the file
+
+
+
+Linux:
+https://github.com/torvalds/linux/blob/master/i
+nclude/linux/fs.h
+
+xv6:
+https://github.com/mit-pdos/xv6-
+riscv/blob/riscv/kernel/file.h
+
+                                                         2
+           Process-specific file descriptor table inside kernel
+                              Process                               • Suppose that we execute
+                                                                      `open(“foo.txt”)` and that
+                          Thread’s
+                           Regs      Address                          the result is 3
+                            …         Space
+                                     (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Open File Description
+                                  3
+                                                   File: foo.txt
+Not shown: Initially                               Position: 0
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                                   3
+           Process-specific file descriptor table inside kernel
+                              Process                             • Suppose that we execute
+                                                                    `open(“foo.txt”)` and that
+                          Thread’s
+                           Regs      Address                        the result is 3
+                            …         Space
+                                     (Memory)
+       User Space                                                    • Next, suppose that we
+                                                                       execute `read(3, buf, 100)`
+    Kernel Space
+                            File Descriptors    Open File Description and the result is 100
+                                  3
+                                                  File: foo.txt
+Not shown: Initially                              Position: 0
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                                 4
+           Process-specific file descriptor table inside kernel
+                              Process                             • Suppose that we execute
+                                                                    `open(“foo.txt”)` and that
+                          Thread’s
+                           Regs      Address                        the result is 3
+                            …         Space
+                                     (Memory)
+       User Space                                                    • Next, suppose that we
+                                                                       execute `read(3, buf, 100)`
+    Kernel Space
+                            File Descriptors    Open File Description and the result is 100
+                                  3
+                                                  File: foo.txt
+Not shown: Initially                              Position: 100
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                                 5
+           Process-specific file descriptor table inside kernel
+                              Process                             • Suppose that we execute
+                                                                    `open(“foo.txt”)` and that
+                          Thread’s
+                           Regs      Address                        the result is 3
+                            …         Space
+                                     (Memory)
+       User Space                                                    • Next, suppose that we
+                                                                       execute `read(3, buf, 100)`
+    Kernel Space
+                            File Descriptors    Open File Description and the result is 100
+                                  3
+                                                  File: foo.txt
+Not shown: Initially                              Position: 100   • Finally, suppose that we
+contains 0, 1, and 2                                                execute `close(3)`
+(stdin, stdout, stderr)
+
+
+
+                                                                                                 6
+           Process-specific file descriptor table inside kernel
+                              Process           • Suppose that we execute
+                                                  `open(“foo.txt”)` and that
+                          Thread’s
+                           Regs      Address      the result is 3
+                            …         Space
+                                     (Memory)
+       User Space                               • Next, suppose that we
+                                                  execute `read(3, buf, 100)`
+    Kernel Space
+                            File Descriptors      and the result is 100
+
+
+Not shown: Initially                            • Finally, suppose that we
+contains 0, 1, and 2                              execute `close(3)`
+(stdin, stdout, stderr)
+
+
+
+                                                                               7
+                               Instead of closing, let’s fork()!
+                             Process 1           • File descriptor          Process 2
+                                                   is copied
+                          Thread’s               • Open file            Thread’s
+                           Regs      Address                             Regs      Address
+                                      Space
+                                                   description is                   Space
+                            …                      aliased                …
+                                     (Memory)                                      (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Open File Description     File Descriptors
+                                  3                                             3
+                                                   File: foo.txt
+Not shown: Initially                               Position: 100
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                              8
+                                Open file description is aliased
+read(3, buf, 100)            Process 1                                      Process 2
+
+                          Thread’s                                      Thread’s
+                           Regs      Address                             Regs      Address
+                            …         Space                               …         Space
+                                     (Memory)                                      (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Open File Description     File Descriptors
+                                  3                                             3
+                                                   File: foo.txt
+Not shown: Initially                               Position: 100
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                              9
+                                Open file description is aliased
+read(3, buf, 100)            Process 1                                      Process 2
+
+                          Thread’s                                      Thread’s
+                           Regs      Address                             Regs      Address
+                            …         Space                               …         Space
+                                     (Memory)                                      (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Open File Description     File Descriptors
+                                  3                                             3
+                                                   File: foo.txt
+Not shown: Initially                               Position: 200
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                              10
+                                Open file description is aliased
+read(3, buf, 100)            Process 1           read(3, buf, 100)          Process 2
+
+                          Thread’s                                      Thread’s
+                           Regs      Address                             Regs      Address
+                            …         Space                               …         Space
+                                     (Memory)                                      (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Open File Description     File Descriptors
+                                  3                                             3
+                                                   File: foo.txt
+Not shown: Initially                               Position: 200
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                              11
+                                Open file description is aliased
+read(3, buf, 100)            Process 1           read(3, buf, 100)          Process 2
+
+                          Thread’s                                      Thread’s
+                           Regs      Address                             Regs      Address
+                            …         Space                               …         Space
+                                     (Memory)                                      (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Open File Description     File Descriptors
+                                  3                                             3
+                                                   File: foo.txt
+Not shown: Initially                               Position: 300
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                              12
+                                     File description is copied
+read(3, buf, 100)            Process 1           read(3, buf, 100)          Process 2
+close(3)
+                          Thread’s                                      Thread’s
+                           Regs      Address                             Regs      Address
+                            …         Space                               …         Space
+                                     (Memory)                                      (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Open File Description     File Descriptors
+                                  3                                             3
+                                                   File: foo.txt
+Not shown: Initially                               Position: 300
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                              13
+                                     File description is copied
+read(3, buf, 100)            Process 1            read(3, buf, 100)          Process 2
+close(3)
+                          Thread’s                                      Thread’s
+                           Regs      Address                             Regs       Address
+                            …         Space                                 …        Space
+                                     (Memory)                                       (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Open File Description       File Descriptors
+                                                                                  3
+                                                   File: foo.txt
+Not shown: Initially                               Position: 300
+contains 0, 1, and 2
+(stdin, stdout, stderr)                         • Open file description
+                                                  remains alive until no
+                                                  file descriptors in any
+                                                  process refer to it                          14
+End of recall
+Why is aliasing the open file description a good idea?
+• It allows for shared resources between processes
+
+
+
+
+                                                         16
+           Example: shared terminal emulator
+• When you fork() a process, the parent’s and child’s printf
+  outputs go to the same terminal
+
+
+
+
+                                                               17
+                            Example: shared terminal emulator
+                             Process 1                                  Process 2
+
+                          Thread’s                                  Thread’s
+                           Regs      Address                         Regs      Address
+                            …         Space                           …         Space
+                                     (Memory)                                  (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Terminal Emulator     File Descriptors
+                                  0                                         0
+                                  1                                         1
+                                  2                                         2
+Not shown: Initially
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                          18
+                            Example: shared terminal emulator
+close(0)                     Process 1                                  Process 2
+
+                          Thread’s                                  Thread’s
+                           Regs      Address                         Regs      Address
+                            …         Space                           …         Space
+                                     (Memory)                                  (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors    Terminal Emulator     File Descriptors
+                                  0                                         0
+                                  1                                         1
+                                  2                                         2
+Not shown: Initially
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+
+
+
+                                                                                          19
+                            Example: shared terminal emulator
+close(0)                     Process 1                                           Process 2
+
+                          Thread’s                                           Thread’s
+                           Regs          Address                              Regs      Address
+                            …             Space                                …         Space
+                                         (Memory)                                       (Memory)
+       User Space
+    Kernel Space
+                            File Descriptors          Terminal Emulator        File Descriptors
+                                                                                     0
+                                     1                                               1
+                                     2                                               2
+Not shown: Initially
+contains 0, 1, and 2
+(stdin, stdout, stderr)
+                                                    • If one process
+                                                      closes stdin (0), it
+                                                      remains open in
+                                                      other processes                              20
+Inter-process communication (IPC)
+
+
+
+
+                                    21
+           Communication between processes
+• Can we view files as communication channels?
+ write(wfd, wbuf, wlen);
+
+
+
+
+                                        n = read(rfd, rbuf, rmax);
+
+• Producer and Consumer of a file may be distinct processes
+  • May be separated in time (or not)
+• However, what if data written once and consumed once?
+  • Don’t we want something more like a queue?
+  • Can still look like file I/O!
+
+
+
+                                                                     22
+Communication across the world looks like file I/O too!
+
+write(wfd, wbuf, wlen);
+
+
+
+
+                                      n = read(rfd, rbuf, rmax);
+
+
+• Connected queues over the Internet
+  • But what’s the analog of open?
+  • What is the namespace?
+  • How are they connected in time?
+
+
+
+
+                                                                   23
+              Request response protocol
+  Client (issues requests)         Server (performs operations)
+write(rqfd, rqbuf, buflen);
+
+
+                             requests
+                                         n = read(rfd, rbuf, rmax);
+
+
+       wait                                            serve request
+                                         write(wfd, respbuf, len);
+
+
+                             responses
+
+n = read(resfd, resbuf, resmax);
+
+                                                                       24
+ Request response protocol: across network
+  Client (issues requests)         Server (performs operations)
+write(rqfd, rqbuf, buflen);
+
+
+                             requests
+                                        n = read(rfd, rbuf, rmax);
+
+
+       wait                                            serve request
+                                         write(wfd, respbuf, len);
+
+
+                             responses
+
+n = read(resfd, resbuf, resmax);
+
+                                                                       25
+ The socket abstraction: endpoint for communication
+• Key idea: communication across the world looks like file I/O
+ write(wfd, wbuf, wlen);
+
+          Process
+                     Socket
+                                         Socket   Process
+                                         n = read(rfd, rbuf, rmax);
+• Sockets: endpoint for communication
+  • Queues to temporarily hold results
+• Connection: two sockets connected over the network → IPC
+  over network!
+  • How to open()?
+  • What is the namespace?
+  • How are they connected in time?
+                                                                      26
+                     Sockets: more details
+• Socket: an abstraction for one endpoint of a network connection
+  • Another mechanism for inter-process communication
+  • Most operating systems (Linux, Mac OS X, Windows) provide this, even
+    if they don’t copy rest of UNIX I/O
+  • Standardized by POSIX
+• First introduced in 4.2 BSD (Berkeley Standard Distribution) Unix
+• Same abstraction for any kind of network
+  • Local (within same machine)
+  • The Internet (TCP/IP, UDP/IP)
+  • Things “no one” uses anymore (OSI, Appletalk, IPX, …)
+
+
+
+
+                                                                           27
+                      Sockets: more details
+• Looks just like a file with a file descriptor
+   • Corresponds to a network connection (two queues)
+   • write adds to output queue (queue of data destined for other side)
+   • read removes from it input queue (queue of data destined for this side)
+   • Some operations do not work, e.g. lseek
+
+
+• How can we use sockets to support real applications?
+   • A bidirectional byte stream isn’t useful on its own…
+   • May need messaging facility to partition stream into chunks
+   • May need RPC facility to translate one environment to another and
+     provide the abstraction of a function call over the network
+
+
+
+                                                                               28
+         Simple example: echo server
+
+
+
+
+                “hello, world”
+
+
+
+                “hello, world”
+
+Client                           Web Server
+
+
+
+
+                                              29
+                  Simple example: echo server
+  Client (issues requests)                         Server (serves requests)
+fgets(sndbuf,bufsize,stdin);
+
+                                                     n = read(sockfd,reqbuf,…);
+          write(sockfd,sndbuf,strlen(sndbuf)+1);
+
+
+                                                    wait
+            n = read(sockfd,rcvbuf, …);
+
+                     Client               Server           print
+                     Socket               Socket
+         wait                                         write(sockfd,reqbuf,…);
+
+
+
+
+                     print
+                                                                                30
+            Echo client-server example
+void client(int sockfd) {
+  int n;
+  char sndbuf[MAXIN]; char rcvbuf[MAXOUT];
+  while (1) {
+    fgets(sndbuf,MAXIN,stdin);               /* prompt */
+    write(sockfd, sndbuf, strlen(sndbuf)+1); /* send (including null terminator) */
+    memset(rcvbuf,0,MAXOUT);                 /* clear */
+    n=read(sockfd, rcvbuf, MAXOUT);          /* receive */
+    write(STDOUT_FILENO, rcvbuf, n);         /* echo */
+}
+
+
+
+          void server(int consockfd) {
+            char reqbuf[MAXREQ];
+            int n;
+            while (1) {
+              memset(reqbuf,0, MAXREQ);
+              n = read(consockfd,reqbuf,MAXREQ); /* recv */
+              if (n <= 0) return;
+              write(STDOUT_FILENO, reqbuf, n);
+              write(consockfd, reqbuf, n);       /* echo*/
+            }
+          }                                                                           31
+             What assumptions are we making?
+• Reliable
+   • Write to a file => Read it back. Nothing is lost.
+   • Write to a (TCP) socket => Read from the other side, same.
+
+
+• In order (sequential stream)
+   • Write X then write Y => read gets X then read gets Y
+
+
+• When ready?
+   • File read gets whatever is there at the time
+      • Actually, need to loop and read until we receive the terminator (‘\0’)
+   • Assumes writing already took place
+   • Blocks if nothing has arrived yet
+
+                                                                                 32
+                          Socket creation
+• File systems provide a collection of permanent objects in a
+  structured name space:
+  • Processes open, read/write/close them
+  • Files exist independently of processes
+  • Easy to name what file to open()
+• Pipes: one-way communication between processes on same
+  (physical) machine (see later)
+  • Single queue
+  • Created transiently by a call to pipe()
+  • Passed from parent to children (descriptors inherited from parent
+    process)
+
+
+
+
+                                                                        33
+                        Socket creation
+• Sockets: two-way communication between processes on same
+  or different machine
+  • Two queues (one in each direction)
+  • Processes can be on separate machines: no common ancestor
+  • How do we name the objects we are opening?
+  • How do these completely independent programs know that the other
+    wants to “talk” to them?
+
+
+
+
+                                                                       34
+         Namespaces for communication over IP
+• Hostname
+   • yunmingxiao.github.io
+• IP address
+    • 185.199.111.153              (IPv4, 32-bit Integer)
+   • 2606:50c0:8000::153           (IPv6, 128-bit Integer)
+• Port Number
+   • 0-1023 are “well known” or “system” ports
+      • E.g., 80 (http), 443 (secure web)
+      • Superuser privileges to bind to one
+   • 1024 – 49151 are “registered” ports (registry)
+      • Assigned by IANA for specific services
+   • 49152–65535 (215+214 to 216−1) are “dynamic” or “private”
+      • Automatically allocated as “ephemeral ports”
+
+                                                                 35
+                   Connection setup over TCP/IP
+     Client Side                                                     Client Side
+Connection request:                                             Server     Server listening:
+1. Client IP addr                                           n   Socket     1. Server IP
+2. Client Port                                   n e ctio                     addr
+                                           o   n
+                                      tC
+3. Protocol (TCP/IP)              ues                                new 2. Well-known
+                           R eq                                     socket
+                                    connection                                port
+               socket                                           socket
+                                                                           3. Protocol
+                                                                              (TCP/IP)
+
+• Special kind of socket: server socket
+   • Has file descriptor
+   • Can’t read or write
+• Two operations:
+   • listen(): Start allowing clients to connect
+   • accept(): Create a new socket for a particular client
+                                                                                               36
+                   Connection setup over TCP/IP
+     Client Side                                                            Client Side
+Connection request:                                                   Server     Server listening:
+1. Client IP addr                                         n           Socket     1. Server IP
+2. Client Port                                 n e ctio                             addr
+                                         o   n
+                                    tC
+3. Protocol (TCP/IP)            ues                                        new 2. Well-known
+                         R eq                                             socket
+                                  connection                                        port
+                socket                                                socket
+                                                                                 3. Protocol
+                                                                                    (TCP/IP)
+
+• 5-tuple identifies each connection:                • Often, client port “randomly” assigned
+   1.   Source IP address                                     • Done by OS during client socket setup
+   2.   Destination IP address                       • Server port often “well known”
+   3.   Source port number                                    • 80 (web), 443 (secure web), 25
+   4.   Destination port number                                 (sendmail), etc
+   5.   Protocols (always TCP here)                           • Well-known ports from 0 to 1023
+                                                                                                        37
+         Web server
+
+
+
+
+         Request
+
+
+
+          Reply
+
+Client                Web Server
+
+
+
+
+                                   38
+           Client-server models
+
+
+Client 1
+
+
+Client 2                             Server
+
+   ***
+
+
+
+Client n
+
+• File servers, web, FTP, Databases, …
+• Many clients accessing a common server
+
+                                              39
+                            Simple web server
+           Client                                  Server
+                                              Create server socket
+     Create client socket
+                                          Bind it to an address (host:port)
+
+Connect it to server (host:port)               Listen for connection
+
+                                                 Accept syscall()
+                Connection socket   Connection socket
+               Write request                    Read request
+               Read response                    Write response
+
+
+      Close client socket               Close connection socket
+
+
+                                         Close server socket
+                                                                              40
+                                Client code
+char *host_name, *port_name;
+
+
+// Create a socket
+struct addrinfo *server = lookup_host(host_name, port_name);
+int sock_fd = socket(server->ai_family, server->ai_socktype,
+                       server->ai_protocol);
+
+
+// Connect to specified host and port
+connect(socket_fd, server->ai_addr, server->ai_addrlen);
+
+
+// Carry out client-server protocol
+run_client(sock_fd);
+
+
+// Clean up on termination
+close(sock_fd);
+                                                               41
+               Client-side: getting the server address
+struct addrinfo *lookup_host(char *host_name, char *port_name) {
+    struct addrinfo *server;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;            /* Includes AF_INET and AF_INET6 */
+    hints.ai_socktype = SOCK_STREAM;        /* Essentially TCP/IP */
+
+
+    int rv = getaddrinfo(host_name, port_name, &hints, &server);
+    if (rv != 0) {
+        printf(“getaddrinfo failed: %s\n”, gai_strerror(rv));
+        return NULL;
+    }
+    return server;
+}
+
+
+                                                                                  42
+                                 Server code (v1)
+// Create socket to listen for client connections
+char *port_name;
+struct addrinfo *server = setup_address(port_name);
+int server_socket = socket(server->ai_family, server->ai_socktype,
+                                 server->ai_protocol);
+// Bind socket to specific port
+bind(server_socket, server->ai_addr, server->ai_addrlen);
+// Start listening for new client connections
+listen(server_socket, MAX_QUEUE);
+
+
+while (1) {
+    // Accept a new client connection, obtaining a new socket
+    int conn_socket = accept(server_socket, NULL, NULL);
+    serve_client(conn_socket);
+    close(conn_socket);
+}
+close(server_socket);                                                43
+             Server address: itself (wildcard IP), passive
+  struct addrinfo *setup_address(char *port) {
+      struct addrinfo *server;
+      struct addrinfo hints;
+      memset(&hints, 0, sizeof(hints));
+      hints.ai_family = AF_UNSPEC; /* Includes AF_INET and AF_INET6 */
+      hints.ai_socktype = SOCK_STREAM; /* Essentially TCP/IP */
+      hints.ai_flags = AI_PASSIVE; /* Set up for server socket */
+      int rv = getaddrinfo(NULL, port, &hints, &server); /* No address! */
+      if (rv != 0) {
+          printf("getaddrinfo failed: %s\n", gai_strerror(rv));
+          return NULL;
+      }
+      return server;
+  }
+
+• Accepts any connections on the specified port
+                                                                             44
+            How could the server protect itself?
+• Handle each connection in a separate process
+  • This will mean that the logic serving each request will be “sandboxed”
+    away from the main server process
+• In the following code, keep in mind:
+  • fork() will duplicate all of the parent’s file descriptors (i.e. pointers to
+    sockets!)
+  • We keep control over accepting new connections in the parent
+  • New child connection for each remote client
+
+
+
+
+                                                                                   45
+Server with protection (each process has own process)
+             Client                                     Server
+                                                 Create server socket
+
+       Create client socket               Bind it to an address (host:port)
+
+  Connect it to server (host:port)                  Listen for connection
+
+                                                    Accept syscall()
+        Connection socket                         Connection socket
+                                                  Child          Parent
+                Write request        Close listen socket    Close connection socket
+                Read response        Read request
+                                     Write response         Wait for child
+        Close client socket
+                                     Close connection       Close server socket
+                                          socket
+                                                                                      46
+                                Server code (v2)
+// Socket setup code elided…
+listen(server_socket, MAX_QUEUE);
+while (1) {
+    // Accept a new client connection, obtaining a new socket
+    int conn_socket = accept(server_socket, NULL, NULL);
+    pid_t pid = fork();
+    if (pid == 0) {
+        close(server_socket);
+        serve_client(conn_socket);
+        close(conn_socket);
+        exit(0);
+    } else {
+        close(conn_socket);
+        wait(NULL);
+    }
+}
+close(server_socket);                                           47
+                How to make a concurrent server
+• So far, in the server:
+   • Listen will queue requests
+   • Buffering present elsewhere
+   • But server waits for each connection to terminate before serving the next
+      • This is the standard shell pattern
+
+
+• A concurrent server can handle and service a new connection
+  before the previous client disconnects
+   • Simple – just don’t wait in parent!
+   • Perhaps not so simple – multiple child processes better not have data
+     races with one another through file system/etc!
+
+
+
+                                                                                 48
+Server with protection (each process has own process)
+             Client                                     Server
+                                                 Create server socket
+
+       Create client socket               Bind it to an address (host:port)
+
+  Connect it to server (host:port)                  Listen for connection
+
+                                                    Accept syscall()
+        Connection socket                         Connection socket
+                                                  Child          Parent
+                Write request        Close listen socket    Close connection socket
+                Read response        Read request
+                                     Write response         Wait for child
+        Close client socket
+                                     Close connection       Close server socket
+                                          socket
+                                                                                      49
+                                Server code (v3)
+// Socket setup code elided…
+listen(server_socket, MAX_QUEUE);
+while (1) {
+    // Accept a new client connection, obtaining a new socket
+    int conn_socket = accept(server_socket, NULL, NULL);
+    pid_t pid = fork();
+    if (pid == 0) {
+        close(server_socket);
+        serve_client(conn_socket);
+        close(conn_socket);
+        exit(0);
+    } else {
+        close(conn_socket);
+        // wait(NULL);
+    }
+}
+close(server_socket);                                           50
+       Faster concurrent server (without protection)
+• Spawn a new thread to handle each connection
+   • Lower overhead spawning process (less to do)
+• Main thread initiates new client connections without waiting for
+  previously spawned threads
+• Why give up the protection of separate processes?
+   • More efficient to create new threads
+   • More efficient to switch between threads
+• Even more potential for data races (need synchronization?)
+   • Through shared memory structures
+   • Through file system
+
+
+
+
+                                                                     51
+     Server with concurrency, without protection
+           Client                                      Server
+                                                  Create server socket
+
+     Create client socket                  Bind it to an address (host:port)
+
+Connect it to server (host:port)                   Listen for connection
+
+                                                    Accept syscall()
+      Connection socket                            Connection socket
+                                                    pthread_create
+                                      Spawned thread
+              Write request           Read request           Main thread
+              Read response           Write response
+
+
+      Close client socket          Close connection socket    Close server socket
+                                                                                    52
+                    Thread pools: more later!
+• Problem with previous version: unbounded threads
+  • When web-site becomes too popular – throughput sinks
+  • Instead, allocate a bounded “pool” of worker threads, representing the
+    maximum level of multiprogramming
+
+                                     Master
+                                     thread      queue
+
+
+
+                                                         Thread pool
+    master() {                                worker(queue) {
+      allocThreads(worker, queue);              while (1) {
+      while (1) {                                 conn = Dequeue(queue);
+        conn = AcceptCon();                       if (conn == NULL)
+        Enqueue(queue, conn);                       sleepOn(queue);
+        wakeup(queue);                            else
+      }                                              ServeWebPage(conn);
+    }                                           }
+                                              }                              53
+                  Now let’s talk about pipe
+• A different IPC mechanism other than socket
+
+
+
+
+                                                54
+Single-process pipe example (not that interesting yet…)
+#include <unistd.h>
+
+int main(int argc, char *argv[]) {
+  char *msg = "Message in a pipe.\n";
+  char buf[BUFSIZE];
+
+    int pipe_fd[2];
+    if (pipe(pipe_fd) == -1) {
+        fprintf (stderr, "Pipe failed.\n");
+        return EXIT_FAILURE;
+    }
+    ssize_t writelen = write(pipe_fd[1], msg, strlen(msg)+1);
+    printf("Sent: %s [%ld, %ld]\n", msg, strlen(msg)+1, writelen);
+
+    ssize_t readlen = read(pipe_fd[0], buf, BUFSIZE);
+    printf("Rcvd: %s [%ld]\n", msg, readlen);
+                                                 Could be useful for
+    close(pipe_fd[0]);
+                                                 multithreaded processes…
+    close(pipe_fd[1]);
+}
+                                                 • Write to pipe_fd[1]
+                                                 • Read from pipe_fd[0]
+                                                                            55
+                Example: pipes between processes
+ pipe(…)        Parent process                      Child process
+ fork()
+               Thread’s                           Thread’s
+                Regs      Address                  Regs      Address
+                 …         Space                    …         Space
+                          (Memory)                           (Memory)
+ User Space
+Kernel Space
+                 File Descriptors                   File Descriptors
+                       3                                  3
+                       4                    In            4
+                                     Pipe
+                                            Out
+
+
+
+
+                                                                        56
+               Example: channel from parent to child
+ pipe(…)        Parent process                        close(4)     Child process
+ fork()
+ close(3)      Thread’s                                          Thread’s
+                Regs          Address                             Regs      Address
+                 …             Space                               …         Space
+                              (Memory)                                      (Memory)
+ User Space
+Kernel Space
+                 File Descriptors                                  File Descriptors
+                                                                         3
+                          4                     In
+                                         Pipe
+                                                Out
+
+
+
+
+                                                                                       57
+  Inter-process communication (IPC): parent → child
+// continuing from earlier
+pid_t pid = fork();
+if (pid < 0) {
+  fprintf (stderr, "Fork failed.\n");
+  return EXIT_FAILURE;
+}
+if (pid != 0) {
+  close(pipe_fd[0]); // Not using this descriptor!
+  ssize_t writelen = write(pipe_fd[1], msg, msglen);
+  printf("Parent: %s [%ld, %ld]\n", msg, msglen, writelen);
+} else {
+  close(pipe_fd[1]); // Not using this descriptor!
+  ssize_t readlen = read(pipe_fd[0], buf, BUFSIZE);
+  printf("Child Rcvd: %s [%ld]\n", msg, readlen);
+}
+
+
+
+
+                                                              58
+                                  Discussion
+• Why pipe over socket?
+   • Socket is more general and heavier
+      • Connection setup
+      • Addressing (IP, port, etc)
+      • Protocol machinery (e.g., TCP congestion control)
+   • Socket is not fork-native
+      • Parent/child must explicitly connect
+• Why pipe over local files?
+   • Files require a pathname (global namespace)
+   • Files are persistent, pipes are ephemeral
+   • Files require explicit synchronization
+      • File offsets, locking, races
+
+
+• Essentially, pipe is fork-native
+                                                            59
+                        Takeaway
+• UNIX provides multiple communication mechanisms
+
+
+  Scope                       Mechanism
+  Same thread                 Function calls
+  Across threads              Shared memory
+  Parent-child processes      Pipe
+  Same machine, unrelated     UNIX domain socket /
+  processes                   files (named shared memory)
+  Across machines             Socket
+
+
+                                                            60
+                                   Conclusion
+• Recall: Everything is a file!
+   • open(), read(), write(), and close() used for wide variety of I/O:
+   • Devices (terminals, printers, etc.)
+   • Regular files on disk
+   • Networking (sockets)
+   • Local inter-process communication (pipes, sockets)
+• Processes have two parts
+   • Threads (Concurrency)
+   • Address Spaces (Protection)
+• Various textbooks talk about processes
+   • When this concerns concurrency, really talking about thread portion of a process
+   • When this concerns protection, talking about address space portion of a process
+• Stack is essential part of computation
+   • Every thread has two stacks: user-level (in address space) and kernel
+   • The kernel stack + support often called the “kernel thread”
+                                                                                        61
+Please help to make this class better!
+
+
+
+
+     https://forms.office.com/r/UcqDW4fpdq
+
+                                             62
+Thanks
+

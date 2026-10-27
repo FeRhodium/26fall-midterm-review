@@ -1,0 +1,952 @@
+             Operating Systems
+                 Lecture 3
+     Threads and processes:
+ a quick, programmer’s viewpoint
+
+                   Prof. Yunming XIAO
+                  School of Data Science
+
+
+
+
+Acknowledgments: Ion Stoica and Matei Zaharia, Berkeley CS 162
+     Conclusion: four fundamental OS concepts
+• Process: an instance of a running program
+  • Address Space + one or more Threads
+• Thread: execution context
+  • Fully describes program state
+  • Program Counter, Registers, Stack, Execution Flags,
+• Address space (with or w/o translation)
+  • Set of memory addresses accessible to program (for read or write)
+  • May be distinct from memory space of the physical machine
+    (in which case programs operate in a virtual address space)
+• Dual mode operation / Protection
+  • Only the “system” has the ability to access certain resources
+  • Combined with translation, isolates programs from each other and
+    the OS from programs
+  • Key to virtualizing hardware to multiple processes (apps)
+                                                                        2
+         Example: UNIX system structure
+
+
+                Applications
+ User
+                Standard Libs
+
+
+
+
+Kernel
+
+
+
+
+Hardware
+
+
+
+
+                                          3
+      User/Kernel (privileged) mode
+
+
+                      User Mode
+                       interrupt
+                                    exception
+           syscall
+
+                     rtn      rfi
+                                                exit
+             exec    Kernel Mode
+
+
+
+
+Limited HW access Full HW access
+
+                                                       4
+Trying it together: simple B&B: OS load process
+                                                          0000…
+                                              code
+P1   P2       Pn                            static data
+          …
+                                              heap
+
+     OS                                       stack
+                   sysmod   1                             1000…
+                                              code
+                    Base    xxxx…   0000…   static data
+                   Bound    xxxx…   FFFF…     heap
+                    uPC     xxxx…
+                     PC                       stack       1100…
+                    regs                                  3000…
+                                              code
+                                …           static data
+                                              heap
+
+                                              stack       3080…
+                                                          FFFF…   5
+       Simple B&B: OS gets ready to execute process
+                                                             0000…
+                                             RTU   code
+       P1    P2        Pn                      static data
+                   …
+                                                   heap
+
+              OS                                   stack
+                            sysmod   1                       1000…
+                                                   code
+                             Base    1000…     static data
+                            Bound    1100…         heap
+                             uPC     0000…
+                              PC                   stack     1100…
+                             regs                            3000…
+                                                   code
+                                     00FF…
+                                         …     static data
+• Privileged instruction: set
+                                                   heap
+  special registers
+• RTU (Return To Usermode)                         stack     3080…
+                                                             FFFF…   6
+                  Simple B&B: user code running
+                                                           0000…
+                                                  code
+       P1   P2        Pn                     static data
+                  …
+                                                  heap
+
+             OS                                   stack
+                           sysmod   0                      1000…
+                                                  code
+                            Base    1000…    static data
+                           Bound    1100…         heap
+                            uPC     xxxx…
+                             PC     0000…         stack    1100…
+                            regs                           3000…
+                                                  code
+                                    00FF…
+• How does kernel switch                …    static data
+  between processes?                              heap
+• First question: How to                          stack    3080…
+  return to system?                                        FFFF…   7
+            3 types of user to kernel mode transfer
+• Syscall
+   • Process requests a system service, e.g., exit
+   • Like a function call, but “outside” the process
+   • Does not have the address of the system function to call
+   • Like a Remote Procedure Call (RPC) – for later
+   • Marshall the syscall id and args in registers and exec syscall
+• Interrupt
+   • External asynchronous event triggers context switch
+   • e. g., Timer, I/O device
+   • Independent of user process
+• Trap or Exception
+   • Internal synchronous event in process triggers context switch
+   • e.g., Protection violation (segmentation fault), Divide by zero, …
+                                                                          8
+          3 types of user to kernel mode transfer
+• Syscall
+• Interrupt
+• Trap or Exception
+
+• All 3 are an UNPROGRAMMED* CONTROL TRANSFER
+   • Where does it go?
+
+
+ *Switching to OS without a direct instruction from the running process
+
+
+
+
+                                                                          9
+How do we get the system target address of the
+     “unprogrammed control transfer”?
+
+
+
+
+                                                 10
+              Interrupt vector
+
+                             Address and properties
+interrupt                    of each interrupt handler
+number (i)
+
+
+
+
+                                   intrpHandler_i () {
+                                    …
+                                   }
+
+
+
+
+• Where else do you see this dispatch pattern?
+
+                                                         11
+                       Simple B&B: user to kernel
+                                                                  0000…
+                                                      code
+       P1    P2        Pn                           static data
+                   …
+                                                      heap
+
+              OS                                      stack
+                            sysmod   0                            1000…
+                                                      code
+                             Base    1000…          static data
+                            Bound    1100…            heap
+                             uPC     xxxx…
+                              PC     0000 1234        stack       1100…
+                             regs                                 3000…
+                                                      code
+                                     00FF…
+• So how to return to system             …          static data
+   • Time interrupt                                   heap
+   • I/O requests                                     stack       3080…
+   • Other things                                                 FFFF…   12
+                           Simple B&B: interrupt
+                                                                   0000…
+                                                       code
+       P1    P2       Pn                             static data
+                  …
+                                                       heap
+
+             OS                                        stack
+                           sysmod   1                              1000…
+                                                       code
+                            Base    1000…            static data
+                            Bound   1100…              heap
+                            uPC     0000 1234
+                             PC     IntrpVector[i]     stack       1100…
+                            regs                                   3000…
+                                                       code
+                                    00FF…
+• How to save registers and               …          static data
+  set up system stack?                                 heap
+
+                                                       stack       3080…
+                                                                   FFFF…   13
+                     Simple B&B: switch user process
+                                                                      0000…
+                                                      RTU   code
+       P1      P2           Pn                          static data
+                        …
+                                                            heap
+
+                   OS                                       stack
+                                 sysmod   1                           1000…
+                                                            code
+            1000 …                Base    3000…         static data
+            1000 …               Bound    0080…             heap
+            0000 1234                     0000 0248
+                                  uPC
+            regs                          0001 0124         stack     1100…
+                                   PC
+              00FF…
+                                  regs                                3000…
+                                                            code
+                                          00D0…
+• How to save registers and                   …         static data
+  set up system stack?                                      heap
+
+                                                            stack     3080…
+                                                                      FFFF…   14
+                                 Simple B&B: “resume”
+                                                                      0000…
+                                                          code
+       P1      P2           Pn                          static data
+                        …
+                                                          heap
+
+                   OS                                     stack
+                                  sysmod   0                          1000…
+                                                          code
+            1000 …                 Base    3000…        static data
+            1000 …                Bound    0080…          heap
+            0000 1234                      xxxx xxxx
+                                   uPC
+            regs                           0001 0248      stack       1100…
+                                    PC
+              00FF…
+                                   regs                               3000…
+                                                          code
+                                           00D0…
+• How to save registers and                    …        static data
+  set up system stack?                                    heap
+
+                                                          stack       3080…
+                                                                      FFFF…   15
+Another view: CPU switch from process P0 to process P1
+
+
+
+
+                                                         16
+                 Running many programs?
+• We have the basic mechanism to
+  • Switch between user processes and the kernel
+  • The kernel can switch among user processes
+  • Protect OS from user processes and processes from each other
+
+
+• Questions ?
+  • How do we decide which user process to run?
+  • How do we represent user processes in the OS?
+  • How do we pack up the process and set it aside?
+  • How do we get a stack and heap for the kernel?
+  • Aren’t we wasting a lot of memory?
+  • …
+
+
+                                                                   17
+ Multiplexing processes: the Process Control Block
+• Kernel represents each process with a
+  process control block (PCB)
+  • Status (running, ready, blocked, …)
+  • Register state (when not ready)
+  • Process ID (PID), User, Executable, Priority, …
+  • Execution time, …
+  • Memory space, translation, …
+• Kernel Scheduler maintains a data structure
+  containing the PCBs
+  • Give out CPU to different processes
+  • This is a Policy Decision                    Process Control Block
+• Give out non-CPU resources
+  • Memory/IO
+  • Another policy decision
+                                                                         18
+                            Scheduler
+
+
+                 if ( readyProcesses(PCBs) ) {
+                        nextPCB = selectProcess(PCBs);
+                        run( nextPCB );
+                 } else {
+                        run_idle_process();
+                 }
+
+
+
+
+• Scheduling: mechanism for deciding which processes/threads
+  receive hardware CPU time, when, and for how long
+• Lots of different scheduling policies provide …
+  • Fairness
+  • Realtime guarantees
+  • Latency optimization
+  • …                                                          19
+                         Going back to threads
+• Definition from before: a single unique execution context
+  • Describes its representation
+
+
+• It provides the abstraction of: a single execution sequence that
+  represents a separately schedulable task
+  • Also a valid definition!
+
+
+• Threads are a mechanism for concurrency (overlapping execution)
+  • However, they can also run in parallel (simultaneous execution)
+
+
+• Protection is an orthogonal concept
+  • A protection domain (i.e., process) can contain one thread or many
+
+                                                                         20
+           Multiprocessing vs. multiprogramming
+• Some definitions:
+  • Multiprocessing: multiple CPUs (cores)
+  • Multiprogramming: multiple jobs/processes
+  • Multithreading: multiple threads/processes
+• What does it mean to run two threads concurrently?
+  • Scheduler is free to run threads in any order and interleaving
+  • Thread may run to completion or time-slice in big chunks or smal chunks
+
+                          A
+    Multiprocessing       B
+                          C
+
+                              A           B           C
+  Multiprogramming            A   B   C   A   B   C       B
+                                                                              21
+               Concurrency is not parallelism
+• Concurrency is about handling multiple things at once
+• Parallelism is about doing multiple things simultaneously
+
+• Example: Two threads on a single-core system...
+  • … execute concurrently …
+  • … but not in parallel
+
+
+• Each thread handles or manages a separate thing or task…
+• But those tasks are not necessarily executing simultaneously!
+
+
+
+                                                                  22
+                   Silly example for threads
+• Imagine the following program:
+  main() {
+      ComputePI(“pi.txt”);
+      PrintClassList(“classlist.txt”);
+  }
+
+
+• What is the behavior here?
+• Program would never print out class list
+• Why? ComputePI would never finish
+
+
+
+                                               23
+                          Adding threads
+• Version of program with threads (loose syntax):
+  main() {
+      create_thread(ComputePI, “pi.txt”);                            T1*
+      create_thread(PrintClassList, “classlist.txt”);                T2
+  }
+
+• create_thread: spawns a new thread running the given procedure
+  • Should behave as if another CPU is running the given procedure
+
+• Now, you would actually see the class list
+
+                     T1     T2      T1    T2     T1    T2
+
+                             Time                                         24
+      More practical motivation: compute/IO overlap
+• Back to Jeff Dean’s “Numbers Everyone Should Know”
+
+
+
+
+• Handle I/O in a separate thread, avoiding blocking other progress
+                                                                      25
+                   Threads mask I/O latency
+• If no thread performs I/O:
+
+                   T1     T2      T1    T2     T1    T2
+
+                           Time
+
+• If thread 1 performs blocking I/O operation:
+
+               T1 starts I/O operation T1 I/O completes
+
+
+                   T1            T2            T1    T2
+
+
+                           Time
+                                                          26
+                   A better example of threads
+  main() {
+     create_thread(ReadLargeFile, “pi.txt”);
+      create_thread(RenderUserInterface);
+  }
+
+• What is the behavior here?
+  • Still respond to user input
+  • While reading file in the background
+
+
+
+
+                                                 27
+                      Multithreaded programs
+• You know how to compile a C program and run the executable
+  • This creates a process that is executing that program
+
+
+• Initially, this new process has one thread in its own address space
+  • With code, global variables, etc. as specified in the executable
+
+
+• Q: How can we make a multithreaded process?
+• A: Once the process starts, it issues system calls to create new
+  threads
+  • These new threads are part of the process: they share its address space
+
+
+
+                                                                              28
+                          System calls (“syscalls”)
+
+
+
+“But I’ve never seen a syscall!”
+• OS library issues system calls
+• Language runtime uses OS
+  libraries…
+
+
+
+
+                                                      29
+                   OS library issues syscalls
+
+
+
+
+                               Application     Login          Windows
+                                                              Manager
+T1   T2       Tn
+          …
+                        libc   OS library    OS library       OS library
+     OS                                                   …
+
+                                                 OS
+
+
+
+
+                                                                           30
+              OS library API for threads: pthread
+            (Here, the “p” is for “POSIX” which is a part of standardized API)
+
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                   void *(*start_routine)(void*), void *arg);
+  • thread is created executing start_routine with arg as its sole argument.
+  • return is implicit call to pthread_exit
+  • (attr contains info like stack size, scheduling policy, etc )
+
+void pthread_exit(void *value_ptr);
+  • terminates the thread and makes value_ptr available to any successful join
+
+int pthread_join(pthread_t thread, void **value_ptr);
+  • suspends execution of the calling thread until the target thread terminates.
+  • On return with a non-NULL value_ptr        the value passed to
+    pthread_exit() by the terminating thread is made available in the location
+    referenced by value_ptr.
+                                                                                   31
+              OS library API for threads: pthread
+                            Output
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                   void *(*start_routine)(void*), void *arg);
+  • thread is created executing start_routine with arg as its sole argument.
+  • return is implicit call to pthread_exit
+  • (attr contains info like stack size, scheduling policy, etc )
+                           Input
+void pthread_exit(void *value_ptr);
+  • terminates the thread and makes value_ptr available to any successful join
+                           Input               Output
+int pthread_join(pthread_t thread, void **value_ptr);
+  • suspends execution of the calling thread until the target thread terminates.
+  • On return with a non-NULL value_ptr        the value passed to
+    pthread_exit() by the terminating thread is made available in the location
+    referenced by value_ptr.
+                                                                                   32
+                  New idea: fork-join pattern
+
+
+
+
+• Main thread creates (forks) collection of sub-threads passing them
+  args to work on…
+• … and then joins with them, collecting results.
+                                                                       33
+         Pthread examples
+• How many threads are in this program?
+• What function does each thread run?
+• One possible result:
+
+
+
+
+• Does the main thread join with the threads in the
+  same order that they were created?
+    • Yes: Loop calls Join in thread order
+• Do the threads exit in the same order they were
+  created?
+    • No: Depends on scheduling order!
+• Would the result change if run again?
+    • Yes: Depends on scheduling order!
+• Is this code safe/correct???
+    • No – threads share a variable that is used
+• without locking and there is a race condition!
+                                                      34
+                                Thread state
+• State shared by all threads in process/address space
+   • Content of memory (global variables, heap)
+   • I/O state (file descriptors, network connections, etc)
+
+
+• State “private” to each thread
+   • Kept in TCB (Thread Control Block)
+   • CPU registers (including, program counter)
+   • Execution stack
+• Execution Stack
+   • Parameters, temporary variables
+   • Return PCs are kept while called procedures are executing
+
+
+
+                                                                 35
+Shared vs. pre-thread state
+
+
+
+
+                              Process State   36
+                    Execution stack example
+        A(int tmp) {
+
+  A:        if (tmp<2)
+
+A+1:         B();
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {
+
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             37
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                           Stack          ret=exit
+  A:        if (tmp<2)     Pointer
+A+1:         B();
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {
+
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             38
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                           Stack          ret=exit
+  A:        if (tmp<2)     Pointer
+A+1:         B();
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {
+
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             39
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                           Stack          ret=exit
+  A:        if (tmp<2)     Pointer
+A+1:         B();
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {
+
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             40
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                                          ret=exit
+  A:        if (tmp<2)
+                                       B: ret=A+2
+A+1:         B();
+                           Stack
+                           Pointer
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {
+
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             41
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                                          ret=exit
+  A:        if (tmp<2)
+                                       B: ret=A+2
+A+1:         B();
+                                       C: ret=B+1
+A+2:        printf(tmp);   Stack
+        }                  Pointer
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {
+
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             42
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                                          ret=exit
+  A:        if (tmp<2)
+                                       B: ret=A+2
+A+1:         B();
+            printf(tmp);               C: ret=B+1
+A+2:
+        }                              A: tmp=2
+                           Stack          ret=C+1
+        B() {              Pointer
+  B:        C();
+                                      Stack Growth
+B+1:    }
+        C() {
+
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             43
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                                          ret=exit
+  A:        if (tmp<2)
+                                       B: ret=A+2
+A+1:         B();
+            printf(tmp);               C: ret=B+1
+A+2:
+        }                              A: tmp=2
+                           Stack          ret=C+1
+        B() {              Pointer
+  B:        C();
+                                      Stack Growth
+B+1:    }
+        C() {
+
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             44
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                                          ret=exit
+  A:        if (tmp<2)
+                                       B: ret=A+2
+A+1:         B();
+A+2:        printf(tmp);               C: ret=B+1
+
+        }                              A: tmp=2
+                           Stack          ret=C+1
+        B() {              Pointer
+  B:        C();
+                                      Stack Growth
+B+1:    }
+        C() {               Output: >2
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             45
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                                          ret=exit
+  A:        if (tmp<2)
+                                       B: ret=A+2
+A+1:         B();
+A+2:        printf(tmp);               C: ret=B+1
+
+        }                              A: tmp=2
+                           Stack          ret=C+1
+        B() {              Pointer
+  B:        C();
+
+B+1:    }
+        C() {               Output: >2
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             46
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                                          ret=exit
+  A:        if (tmp<2)
+                                       B: ret=A+2
+A+1:         B();
+                                       C: ret=B+1
+A+2:        printf(tmp);   Stack
+        }                  Pointer
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {               Output: >2
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             47
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                                          ret=exit
+  A:        if (tmp<2)
+                                       B: ret=A+2
+A+1:         B();
+                           Stack
+                           Pointer
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {               Output: >2
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             48
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                           Stack          ret=exit
+  A:        if (tmp<2)     Pointer
+A+1:         B();
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {               Output: >2 1
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             49
+                    Execution stack example
+                                       A: tmp=1
+        A(int tmp) {
+                           Stack          ret=exit
+  A:        if (tmp<2)     Pointer
+A+1:         B();
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {               Output: >2 1
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             50
+                    Execution stack example
+        A(int tmp) {
+  A:        if (tmp<2)
+A+1:         B();
+A+2:        printf(tmp);
+        }
+        B() {
+
+  B:        C();
+
+B+1:    }
+        C() {               Output: >2 1
+  C:        A(2);          • Stack holds temporary results
+C+1:    }                  • Permits recursive execution
+        A(1);              • Crucial to modern languages
+exit:
+
+                                                             51
+               Memory layout with two threads
+• Two sets of CPU registers (where is it?)
+• Two sets of Stacks
+                                                                      0000…
+• Issues:                                                 code
+  • How do we position stacks relative to each other?   static data
+  • What maximum size should we choose for the            heap
+    stacks?
+                                                          stack
+  • What happens if threads violate this?
+  • How might you catch violations?                       stack
+                                                                      FFFF…
+
+
+
+
+                                                                              52
+                             Conclusion
+• Threads are the OS unit of concurrency
+  • Abstraction of a virtual CPU core
+  • Can use pthread_create, etc., to manage threads within a process
+  • They share data → need synchronization to avoid data races
+• Processes consist of one or more threads in an address space
+  • Abstraction of the machine: execution environment for a program
+  • Can use fork, exec, etc. to manage threads processes
+• We saw the role of the OS library
+  • Provide API to programs
+  • Interface with the OS to request services
+
+
+
+
+                                                                       53
+Thanks
+

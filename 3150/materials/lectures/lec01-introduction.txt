@@ -1,0 +1,760 @@
+             Operating Systems
+                 Lecture 1
+
+                  Introduction
+
+                   Prof. Yunming XIAO
+                  School of Data Science
+
+
+
+
+Acknowledgments: Ion Stoica and Matei Zaharia, Berkeley CS 162
+                         Goals today
+
+
+• Course logistics
+
+• Why should you care?
+
+• Why is it hard?
+
+• What is an Operating System?
+
+
+
+                                       2
+                            About me
+• Background
+  • Education: B.Eng. BUPT (2019) & Ph.D. Northwestern U (2024)
+  • Work Experience
+     • Intern: ByteDance, Bell Labs, HPE Labs, Google
+     • Research Fellow (2024-2025), University of Michigan—Ann Arbor
+     • Assistant Professor (2025.7-Present), SDS, CUHK-Shenzhen
+  • Research: computer systems, networks, and security
+
+• Contact
+  • Email: yunmingxiao@cuhk.edu.cn
+  • Office: Zhi Xin Building 403a
+  • Office Hour: 5pm-6pm Tuesday (except holidays)
+
+                                                                       3
+                             Course stuff
+ • Instructor: XIAO, Yunming
+
+
+ • Teaching Assistants:                        • USTF:
+
+
+
+
+LI, Cheng (L)    JIA, Zhao               QIN, Weiya       YIN, Shi
+
+
+
+
+XIE, Botao      XU, Minghao      LIU, Yuxuan     ZHANG, Ruiqi TAN, Linzheng
+                                                                          4
+                          Tutorials
+• Tutorials will be provided by TAs and USTF
+• Very helpful for you to finish the projects!
+• You should sign up for the tutorial session
+• Time: 6pm – 8pm, every Wednesday
+
+
+
+
+                                                 5
+                      Course materials
+• Infrastructures:
+  • Website:
+    https://yunmingxiao.github.io/courses/csc3150-
+    26fall/syllabus.html
+  • Blackboard: https://bb.cuhk.edu.cn/
+
+• Recommended textbooks:
+  • Operating System Concepts, by A. Silberschatz, P.
+    Galvin, and G. Gangne (Available online)
+  • Operating Systems: Three Easy Pieces, by Remzi and
+    Andrea Arpaci-Dusseau (Available online)
+  • The RISC-V Reader: An Open Architecture Atlas, by D.
+    Patterson and A. Waterman, Strawberry Canyon
+    (Available online)
+                                                           6
+                             Grading
+• Assignments/projects: 50%
+   • 4 assignments: 12.5% each
+   • Design (doc) + implementation (code)
+   • Projects are done individually
+   • We have much less workload:
+      • Berkeley CS162: 5 labs + 7 programming assignments
+      • MIT 6.1810: 8 labs + 23 homeworks
+
+
+• (new!!) Midterm exam: 20%, in written
+
+• Final exam: 30%
+      • Computer-lab exam (new!!)
+
+                                                             7
+               Collaboration policy
+Explaining a concept to other students*
+Discussing algorithms/testing strategies with other students
+Searching online for generic algorithms (e.g., hash table)
+
+Sharing code or test cases with other students
+Copying or reading another student’s code or test cases
+Copying or reading online code or test cases
+Uploading your solutions online (during AND after the course)
+
+We compare all homework submissions against each other and
+online solutions and will take actions against offenders
+* AI is considered as a student who has taken CSC3150 before
+
+                                                                8
+                    Assignments
+
+
+                      (Intended)   (Intended)
+Assignment Number
+                      Start Date    Due Date
+
+       #1               9.29         10.18
+
+       #2               10.20        11.8
+
+       #3               11.10        11.29
+
+       #4               12.1         12.20
+
+
+                                                9
+                       Course workloads
+• Lectures
+  • Core concepts and principles of OS, which form the foundation
+    of computer systems in general (based on Berkeley CS 162)
+  • Recent developments and frontiers in computer systems
+     • Big data systems
+     • Machine learning systems
+     • Cloud computing
+     • We will read interesting research papers in computer systems
+
+
+• Programming assignments: VERY CHALLENGING
+  • Design and implement your own operating systems
+  • xv6 from MIT (used by OS courses at MIT)
+  • But still, (much) reduced workloads
+                                                                      10
+            Preparing yourself for this class
+• The assignments will require you to be very comfortable with
+  programming and debugging C
+  • Pointers (including function pointers, void*)
+  • Memory management (malloc, free, stack vs heap)
+
+
+• You will be working on a larger, more sophisticated code
+  base than anything you've likely seen in other courses!
+
+
+
+
+                                                                 11
+                             Goals
+• Prepare students for advanced study and research in computer
+  systems, by providing the necessary foundation and context
+  (learn core CS concepts)
+
+• Enable students to understand the internal core logic of the
+  operating system in depth and have a chance to design and
+  implement their own operating systems (foundation for
+  advanced programming)
+
+• Empower students to write and debug large programs, design
+  and implement useful abstractions and especially practice their
+  ability to write and debug multi- threading programs (Get hands
+  on industrial-scale codebase)
+                                                                    12
+                               Syllabus
+• OS concepts: how to navigate as a system programmer
+  • Process, I/O, networks
+• Synchronization & scheduling
+  • Threads, locks, deadlock, scheduling scalability, fairness
+• Address Space
+  • Virtual memory, address translation, protection, sharing
+• File systems
+  • I/O devices, file objects, storage, naming, caching, performance, paging
+• Distributed systems
+• Reliability and security
+• Cloud infrastructure
+• Modern computer system research
+                                                                               13
+ Lecture goal
+
+
+
+
+Interactive!!!
+
+
+
+
+                 14
+Questions?
+                  Why should you care?
+
+• Every device, from your smartwatch, your smart light bulb,
+  to your mobile phone and laptop runs an operating system
+
+• Every program you will ever write will run on an operating
+  system
+
+• Its performance and execution behavior will depend on the
+  operating system
+
+
+
+                                                               16
+            Why is designing an OS hard?
+
+• Think: what do they have in common?
+
+
+
+
+                                           17
+             Why is designing an OS hard?
+
+• OS is everywhere
+
+
+
+
+    All have an operating system     Communication over Internet
+
+
+           Interface across huge diversity of devices
+                                                                   18
+                           Bell’s law
+
+
+Computers
+Per Person                                               Number crunching,
+  1:106                                                  Data Storage,
+                      Mainframe
+                                                         Massive Inet
+  1:103                    Mini                          Services, ML, …
+                                  Workstation
+                                      PC                 Productivity,
+  1:1                                      Laptop
+                                                         Interactive
+                                                PDA
+                                                  Cell
+  103:1                                                  Streaming from/to
+                                                         the physical world
+
+
+
+             One new device class every 10 years
+                                                                              19
+               Across many timescales
+
+• Jeff Dean’s numbers every should know
+
+
+
+
+                                          8 orders of
+                                          magnitude!
+
+
+
+
+                                                        20
+With increased complexity
+
+
+
+
+                  (million)
+                              21
+               Why so much complexity?
+
+• Hardware is becoming smarter!
+• Better reliability and security
+• Better performance (more efficient code, more parallel code)
+• Better energy efficiency
+• Legacy
+
+
+
+
+                                                                 22
+         What is an Operating System?
+
+
+    Operating                       System
+
+Manages multiple           A set of interconnected
+tasks and users            components with an expected
+                           behavior observed at the
+                           interface with its environment
+
+
+
+
+                                                            23
+                   Operating System (v1)
+
+• An operating system is the layer of software that interfaces
+  (many) applications running on a machine with (diverse)
+  hardware resources of that machine
+
+
+          Application 1      Application 2   Application 3
+
+
+                          Operating System
+
+
+                              Hardware
+
+
+                                                                 24
+                   Operating System (v2)
+
+• An operating system implements a virtual machine for the
+  application whose interface is more convenient than the
+  raw hardware interface
+• (convenient = portability, reliability, security)
+
+          Application 1      Application 2   Application 3
+
+
+                          Operating System
+
+
+                              Hardware
+
+
+                                                             25
+How I view the OS
+
+
+
+
+                    26
+                       Three main hats
+
+
+
+
+    Referee                Illusionist                 Glue
+
+ Manage protection,    Provide clean, easy-to-   Provides a set of
+isolation, and          use abstractions of      common services
+sharing of resources
+                         physical resources
+
+
+                                                                     27
+                      OS as a referee
+
+• Allow multiple (untrusted) applications to run concurrently
+
+
+
+
+                                                                28
+                         OS as a referee
+
+• Allow multiple (untrusted) applications to run concurrently
+
+
+    Fault Isolation        Resource Sharing      Communication
+
+ Isolate programs from   How to choose which    How can OS support
+       each other          task to run next?     communication to
+                                                   share results?
+ Isolate OS from other       How to split
+        programs          physical resources?
+
+       Process
+      Dual Mode               Scheduling           Pipes/Sockets
+      Execution
+
+                                                                     29
+               What does this program do?
+
+                                     xiao@laptop> gcc –o cpu cpu.c -Wall
+                                     xiao@laptop> ./cpu A
+                                     A
+#include <stdio.h>                   A
+#include <stdlib.h>                  A
+#include <sys/time.h>                A
+#include <assert.h>                  …
+                                     xiao@laptop> ./cpu A & ./cpu B & ./cpu C
+int main(int argc, char *argv[]){
+  char *str = argv[1];                 A          A             A
+  while (1) {                          A          B             B
+                                    a)         b) C          c) B
+    printf("%s\n", str);               A
+                                       A          A             A
+  }                                               B             C
+                                       …
+  return 0;                                       C             B
+}                                                 …             C
+                                                                …
+
+                                    xiao@laptop> ./cpu & ; ./cpu B
+                                    Segmentation Fault
+                                    B
+                                    …
+                                                                                30
+Refereeing is hard!
+
+             Up to MacOS 9x and Windows 3.1
+
+             OS cannot force program to give up
+                          control!
+
+                xiao@very-old-laptop>
+                ./cpu A & ./cpu B & ./cpu C
+                A
+                A
+                A
+                A
+                A
+                A
+                A
+                …
+                                                  31
+                       Three main hats
+
+
+
+
+    Referee                Illusionist                 Glue
+
+ Manage protection,    Provide clean, easy-to-   Provides a set of
+isolation, and          use abstractions of      common services
+sharing of resources
+                         physical resources
+
+
+                                                                     32
+                          OS as an illusionist
+
+• Mask the restrictions inherent in computer hardware
+  through virtualization
+
+
+       All alone                All powerful           All expressive
+
+  Provide illusion that     Provide illusion that    Provide illusion of
+    application has        hardware resources are   hardware capabilities
+    exclusive use of              infinite              that are not
+       resources                                     physically present
+
+
+
+
+                                                                            33
+                      What does this program do?
+
+                                            xiao@laptop> gcc –o memory memory.c -Wall
+                                            xiao@laptop> ./memory
+                                            (120)   p: 0x200000
+#include <stdio.h>                          (120)   p: 1
+                                            (120)   p: 2
+#include <stdlib.h>                         (120)   p: 3
+#include <unistd.h>                         (120)   p: 4
+
+int main(int argc, char *argv[]){           xiao@laptop> ./memory & ./memory
+                                            (120) p: 0x200000
+  int *p = malloc(sizeof(int));
+  printf("(%d) p: %p\n", getpid(), p);      (254) p: 0x200000
+  *p = 0;
+  while (1) {
+    *p = *p + 1;
+    printf("(%d) p: %d\n", getpid(), *p);    a) (120)   p:   1      b) (120)   p:   1
+  }                                             (254)   p:   2         (254)   p:   1
+  return 0;                                     (120)   p:   3         (120)   p:   2
+}
+                                                (254)   p:   4         (254)   p:   2
+                                                (120)   p:   5         (120)   p:   3
+                                                (254)   p:   6         (254)   p:   3
+
+
+
+                                                                                        34
+                       Three main hats
+
+
+
+
+    Referee                Illusionist                 Glue
+
+ Manage protection,    Provide clean, easy-to-   Provides a set of
+isolation, and          use abstractions of      common services
+sharing of resources
+                         physical resources
+
+
+                                                                     35
+                             OS as a glue
+
+• Provide set of common, standard services to applications to
+  simplify and regularize their design
+
+
+     Make sharing easier                             Maximize reuse
+
+     Simpler if all assume                         Avoid re-implementing
+     same basic primitives                           functionality from
+                                                          scratch.
+                                                    Evolve components
+                                                       independently
+
+
+                 File system, user interface, network, etc
+                                                                           36
+                                       Putting it all together
+                                  Referee + illusionist + Glue
+                                 => Easy to use virtual machine
+                         Program 1    Program 2
+Software               OS HardwareVir tualization                           Program 1
+  ISA
+Hardware                                                            Infinite       Infinite Memory
+                                     Memory
+                                                                   Processors
+                                                                  Storage Mger     Network Mger
+           Processor
+                                                                                 GUI
+                       Ctrlr
+                                                       Displays             Program 2
+                                  Networks
+                                                                    Infinite       Infite Memory
+           Storage                                                 Processors
+                                                                  Storage Mger     Network Mger
+                                              Inputs
+                                                                                 GUI
+                                                                                                     37
+                       Evaluation criteria
+
+• OS must implement the abstraction efficiently, with low overhead,
+  and equitably
+• Overhead: Added resource cost of implementing an abstraction
+  Fairness: How equitable are resources distributed across
+  applications?
+• Portability: How much you need to change the application when
+  hardware changes?
+• Reliability: Does the system do what is supposed to do?
+• Security: Maintain expected functionality in face of attacks
+  Performance: meet user’s and system administrator’s expectations
+  in terms of response time, throughput, and predictability
+
+                                                                      38
+                Evaluation criteria: portability
+
+• A portable abstraction does not change as the hardware changes
+• Can’t rewrite application (or OS!) every time
+• Must plan for hardware that does not exist yet!
+
+
+            Application 1      Application 2   Application 3
+
+                       Abstract Machine Interface
+
+                            Operating System
+
+                      Hardware Abstraction Layer
+
+                                Hardware
+                                                                   39
+                 Evaluation criteria: reliability
+
+• System does what it is supposed to do
+• OS failures are catastrophic!
+
+
+
+
+          Availability: mean time to failure + mean time to repair
+                                                                     40
+                 Evaluation criteria: security
+
+• Minimize vulnerability to attack
+• Integrity: Computer’s operation cannot be compromised by a
+  malicious attacker
+• Privacy: data stored on computer accessible to authorized users
+
+
+
+
+                                                                    41
+            Evaluation criteria: performance
+
+
+
+• Response time: how long does it take for a task to complete
+
+• Throughput: Rate at which group of tasks can be completed
+
+• Predictability: Are performance metrics constant over time?
+
+
+
+
+                                                                42
+                        One last note…
+
+
+
+• Operating systems in the age of AI
+
+• Everything gets reinvented → this class more relevant than ever
+
+
+
+
+                                                                    43
+             The Bitter Lesson, by Rich Sutton
+
+
+             Turing Award winner (2024)
+
+
+
+
+• https://www.cs.utexas.edu/~eunsol/courses/data/bitter_lesson.pdf
+                                                                     44
+              The Bitter Lesson, by Rich Sutton
+
+• Human-designed knowledge does not scale
+  • Handcrafted rules eventually plateau
+
+
+• Learning and search scale with computation
+  • This pattern underlies AlphaGo, deep learning, and LLMs
+
+
+• Systems unlock that computation
+  • Better scheduling, memory, parallelism, and networking enable larger-
+    scale, smarter AI
+
+            Takeaway: More efficient computation creates
+            more room for intelligence.
+                                                                            45
+AI demands are exploding
+
+
+
+
+                            nt   hs
+                    18   mo
+                r y
+         e   ve
+     10x
+
+
+
+
+                                      46
+Growing gap between demand and supply
+
+
+
+
+                                   nt   hs                  Gap to fill!
+                           18   mo
+                       r y
+                e   ve
+            10x
+                                               month   s)   CPU
+                                   ev e r y 18
+                      ’s Law
+                             (2x
+           Mo o r e
+
+
+
+
+                                                                       47
+Growing gap between demand and supply
+
+
+
+
+                                   nt   hs
+                           18   mo                         Gap to fill!
+                       r y
+                e   ve
+            10x
+                                              month   s)
+                                  ev e r y 18
+              o r e ’s Law (2x
+           Mo
+                                                           CPU
+
+
+
+                                                                      48
+Specialized hardware not enough
+
+
+
+
+                                                         Gap to fill!
+                                nt   hs
+                        18   mo                         GPU
+                    r y
+             e   ve
+         10x
+                                           month   s)
+                               ev e r y 18
+           o r e ’s Law (2x
+        Mo
+                                                        CPU
+
+
+
+                                                                   49
+Specialized processors to the rescue → more complexity
+
+
+
+
+                                                         50
+From servers to pods → more complexity
+
+
+
+
+                                         51
+           Huge spends on the AI infrastructure
+
+
+
+
+               All the infrastructures need to be managed:
+Scale changes, hardware changes, application changes → OS will change!
+                                                                         52
+                             Goals today
+
+• Why should you care?
+  • The OS is everywhere
+
+
+• Why is it hard?
+  • Deal with many different devices, many different time scales. Safety-critical
+
+
+• What is an Operating System?
+  • Provides abstraction of a simple, infinite virtual machine
+  • Three roles: referee, illusionist, and glue
+  • A good OS cares about performance, reliability, security and portability
+
+
+                                                                                    53
+Thanks
+

@@ -1,0 +1,283 @@
+Desk Number________Student Number_______________________Student Name_______________________Desk Number________Student Number_______________________Student Name_______________________
+Desk Number________
+Student Number_______________________
+Student Name_______________________
+Desk Number________
+Student Number_______________________
+Student Name_______________________
+School of Data Science
+FINAL EXAMINATION
+Term 2 2025-2026
+CSC3150 Operating System
+Examination Duration: 120 minutes
+This examination has    8    questions.
+The score distribution of the 8 question is Question 1 (10%), Question 2 (8%), Question 3 (16%), Question 4 (16%), Question 5 (12%), Question 6 (22%), and Question 7 (10%) and Question 8 (6%).
+Exam Conditions:
+This is a FORMAL Examination
+This is a RESTRICTED OPEN BOOK Exam. Maximum of one (1) sheet of handwritten notes double-sided are permitted
+Materials Permitted:
+Maximum of one (1) sheet of A4-sized double-sided notes are permitted. NO OTHER MATERIALS PERMITTED
+Calculators without the functionalities of programming and file storage are permitted.
+Materials Supplied:
+1 × 6 Page Answer Booklet
+You must write all your answers in your answer book.
+Question 1. Concepts and definitions. (10 points)
+(2 points) Explain the difference between a process and a thread. Give one advantage of threads over processes and one disadvantage.
+(2 points) What is dual mode in an operating system? What is its purpose?
+(2 points) What is a race condition? Give a simple example code.
+(4 points) Consider the following Pthreads interface:
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void*), void *arg);
+void pthread_exit(void *value_ptr);
+int pthread_join(pthread_t thread, void**value_ptr);
+Ignoring attr and start_routine, explain the pointer design of the following parameters:
+why thread in pthread_create is a pointer
+why arg in pthread_create is a pointer
+why value_ptr in pthread_exit is a void *
+why value_ptr in pthread_join is a void **
+Question 2. System programming and OS foundations. (8 points)
+A program creates a child process using fork(). Immediately after the fork(), both parent and child execute the same next line of code. 
+2.1 (3 points) Answer the following questions. 
+What values are returned by fork() in the parent and child?
+What memory is logically duplicated?
+Name one thing that is shared and one thing that is not shared.
+2.2 (3 points) A developer wants two unrelated processes on the same machine to communicate. For each of the following IPC mechanisms, say whether it is appropriate; if not, explain why:
+Pipe
+Socket
+Shared memory
+(2 points) Why does the OS expose files as an abstraction? Name two benefits of the file abstraction from the perspective of application programmers and OS designers.
+Question 3. Synchronization. (16 points)
+A bounded buffer has size N. Multiple producers call put(Item), and multiple consumers call get(). Assume the following semaphore and lock primitives are available:
+wait(s) and signal(s) for semaphores
+lock(m) and unlock(m) for mutexes
+You may assume:
+semaphore empty counts the number of empty slots
+semaphore full counts the number of full slots
+mutex m protects the shared buffer state
+The shared data structure is:
+Item buf[N];
+int head = 0, tail = 0;
+semaphore empty = N;
+semaphore full = 0;
+mutex m;
+3.1 (6 points) Fill in the code for put(Item) and Item get() using semaphores and a mutex.
+Your solution must:
+correctly block producers when the buffer is full
+correctly block consumers when the buffer is empty
+correctly update head and tail
+use the synchronization primitives in the correct order
+void put(Item x) {
+// fill in
+}
+Item get() {
+Item x;
+// fill in
+return x;
+}
+3.2 (4 points) Suppose a programmer removes the mutex and keeps only empty and full. Is this correct? Why? if not correct, give a concrete example of what can go wrong.
+3.3 (3 points) Suppose a programmer swaps the order of wait(empty) and lock(m) inside put(). Will this lead to a problem, and why?
+(3 points) Suppose a programmer writes the following incorrect producer code:
+void put(Item x) {
+    wait(empty);
+    buf[tail] = x;
+    tail = (tail + 1) % N;
+    signal(full);
+}
+Assume there are multiple producers and consumers. Explain what synchronization is missing and give one concrete problem that may occur.
+Question 4. CPU scheduling with multi-level feedback queue. (16 points)
+Consider a multilevel feedback queue scheduler with the following rules:
+There are 3 queues: Q0, Q1, Q2
+New jobs enter Q0
+Q0 has time quantum = 2
+Q1 has time quantum = 3
+Q2 runs FCFS
+If a job uses up its entire quantum in Q0 or Q1, it is demoted one level
+If a job yields the CPU before its quantum expires, it stays at the same level
+Higher-priority queues always run before lower-priority queues (with pre-emption)
+There is no priority boost for the sake of simplicity
+Now, three jobs arrive at time 0, 1, 2, in the order A, B, C, respectively:
+Job
+CPU behavior
+A
+Needs 6 units of CPU, never blocks
+B
+Needs 3 units of CPU, never blocks
+C
+Executes 1 unit of CPU, then blocks for I/O for 2 unit of time; then executes 1 unit of CPU, blocks again for 2 unit of time; then executes 1 final unit of CPU and terminates
+Assume that when C finishes I/O, it returns to the same queue it was in when it blocked.
+4.1 (9 points) Simulate the execution until all jobs complete. Fill in the following trace. 
+Time interval
+Which job is running
+At which queue
+0-1
+A
+Q0
+1-2
+A
+Q0
+2-3
+3-4
+4-5
+5-6
+6-7
+7-8
+8-9
+9-10
+10-11
+11-12
+Then answer:
+At what times is a job demoted?
+At what time does C return from I/O?
+At what time does each job finish?
+4.2 (3 points) What is the waiting time for each job? 
+4.3 (2 points) What feature of MLFQ is intended to favor interactive jobs?
+4.4 (2 points) Give one workload or scenario in which MLFQ behaves poorly or unfairly.
+Question 5. Deadlock. (12 points)
+Part A: Single-instance resources
+A system has:
+processes: P1, P2, P3
+resource types: R1, R2, R3
+one instance of each resource
+Current allocation:
+R1 is allocated to P1
+R2 is allocated to P2
+R3 is allocated to P3
+Current outstanding requests:
+P1 requests R2
+P2 requests R3
+P3 requests R1
+5.1 (4 points) Draw the resource-allocation graph.
+5.2 (2 points) Is the system deadlocked? Justify your answer using the graph.
+5.3 (2 points) If the system is deadlocked, describe one concrete way to resolve it.
+Part B: Multiple-instance resources
+A second system has:
+resource type A with 2 instances
+resource type B with 1 instance
+Its current state is:
+Process
+Allocation
+Request
+P1
+A=1, B=0
+A=0, B=1
+P2
+A=1, B=0
+A=0, B=1
+P3
+A=0, B=1
+A=1, B=0
+5.4 (2 points) Run the deadlock detection algorithm manually and state clearly whether the system is deadlocked.
+5.5 (2 points) If the system is deadlocked, give one way to resolve it. If the system is not deadlocked, describe one additional request or change of state that would put it into deadlock.
+Question 6. Memory Management (22 points)
+Assume a demand-paging system with 3 physical frames and the page reference string:
+A, B, C, A, D, B, A, E, B, A, C
+6.1 (11 points) For the reference string above, compute the number of page faults under FIFO and LRU, and MIN respectively. Show the frame contents after each reference and answer the number of page faults.
+FIFO:
+Page\Ref
+A
+B
+C
+A
+D
+B
+A
+E
+B
+A
+C
+1
+A
+2
+B
+3
+C
+Total number of page fault:
+LRU:
+Page\Ref
+A
+B
+C
+A
+D
+B
+A
+E
+B
+A
+C
+1
+A
+2
+B
+3
+C
+Total number of page fault:
+6.2 (7 points) Apply the Clock replacement algorithm to the same reference string. Assume the following Clock-algorithm conventions:
+There are 3 physical frames, arranged in a circle.
+Each frame has a reference bit (R bit).
+When a page is referenced and is already in memory, its R bit is set to 1.
+On a page fault, the clock hand examines frames starting from its current position:
+if the current frame has R = 1, set it to 0 and advance the hand to the next frame;
+if the current frame has R = 0, replace that page with the new page.
+After a new page is loaded, its R bit is set to 1, and the clock hand advances to the next frame.
+Initially, all frames are empty, and the clock hand starts at frame 0.
+Count one hand movement each time the clock hand advances by one frame.
+A full cycle means the clock hand makes one complete revolution over all 3 frames.
+Please fill in the table below and answer questions afterwards:
+Ref
+Page fault?
+Frames after step
+R bits after step
+Hand after step
+A
+Yes
+[A, -, -]
+[1, -, -]
+1
+B
+Yes
+[A, B, -]
+[1, 1, -]
+2
+C
+Yes
+[A, B, C]
+[1, 1, 1]
+0
+A
+D
+B
+A
+E
+B
+A
+C
+The total page fault number is:
+The number of total full cycles that the clock hand has traversed:
+6.3 (2 points) Explain the idea of multi-level paging. Why is it preferable to storing one large flat page table for a large sparse virtual address space?
+6.4 (2 points) Suppose the system has the following timing parameters:
+TLB lookup time = 10 ns
+Cache access time = 5 ns
+Main memory access time = 100 ns
+TLB hit rate = 90%
+Cache hit rate = 80%
+Assume:
+on a TLB hit, address translation costs one TLB lookup, then the data is accessed through the cache
+on a TLB miss, the system must first access memory to obtain the page-table entry, then access the data through the cache
+if the data is found in cache, no main-memory access is needed for the data ignore page faults
+Please compute the effective access time for (a) TLB hit + cache hit, (b) TLB hit + cache miss, (c) TLB miss + cache hit, (d) TLB miss + cache miss.
+Question 7. Files and file systems (10 points)
+7.1 (4 points) Explain the difference between high-level file I/O and low-level file I/O. Give one advantage of each.
+7.2 (4 points) Compare Unix inode-based indexed allocation and FAT-style linked allocation. For each file system, explain (a) how file blocks are located, (b) one advantage, and (c) one disadvantage.
+7.3 (2 points) A journaling file system writes metadata updates to a journal before applying them to the main file system. Answer the following:
+What problem is journaling trying to solve?
+After a crash, what does recovery do with the journal?
+Question 8. Distributed Systems (6 points)
+8.1 (3 points) The lecture states that NFS uses weak consistency. Explain what this means. In your answer:
+describe how clients learn that a file has changed
+explain why a client may temporarily read stale data 
+explain what may happen if multiple clients write the same file concurrently 
+8.2 (3 points) Consider two-phase commit (2PC) with one coordinator and several participants. For each of the following failure scenarios, state what happens and whether any process may become blocked.
+The coordinator crashes before sending VOTE-REQ to all participants.
+All participants vote YES, but the coordinator crashes before sending the final decision.
+A participant has already received GLOBAL-COMMIT, while another participant is still waiting when the coordinator crashes.
+END OF EXAMINATION
