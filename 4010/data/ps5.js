@@ -6,7 +6,8 @@ Review.add({
   title: "Problem Set 5 精讲 · 时间复杂性辨析、2^k 长度语言判定机与独立集 INDEPENDENT-SET",
   meta: "Problem Set 5 · 5 道时间层次判断 + 2 的幂长度 TM 分析 + 独立集验证机与 CLIQUE 归约",
   sources: [
-    { label: "Problem Set 5 (Official PDF)", href: "materials/PS5.pdf" }
+    { label: "Problem Set 5 (Official PDF)", href: "materials/PS5.pdf" },
+    { label: "Official Solutions (PS5(Solutions).pdf)", href: "materials/PS5(Solutions).pdf" }
   ],
   html: String.raw`
 <p class="lede">本习题集（Problem Set 5）是期中考试前最后一份作业（属于期中考查范围），全面覆盖 Lecture 10–12 的三大核心考点：<strong>\(\mathrm{TIME}(T(n))\)、\(\mathrm{P}\) 与时间层次定理的边界条件辨析</strong>、<strong>非平凡单带/多带图灵机的时间复杂度 \(\Theta\) 分析</strong>，以及<strong>用“显式证书验证机”与“向 \(\mathrm{CLIQUE}\) 多项式时间归约”两种方法证明 \(\mathrm{INDEPENDENT\text{-}SET} \in \mathrm{NP}\)</strong>。</p>
@@ -41,8 +42,8 @@ Review.add({
   <strong>结论：False（错误！缺少“\(g\) 时间可构造”与“\(f(n) \ge n\)”条件，违反 Gap 定理）</strong>
   <p><strong>原因分析</strong>：强时间层次定理成立必须满足两个关键前提：</p>
   <ol>
-    <li><strong>\(g(n)\) 必须是时间可构造的（Time-constructible）</strong>，即在输入 \(1^n\) 上可在 \(O(g(n))\) 步内算出 \(1^{g(n)}\)，而<strong>仅仅“\(g\) 可计算（computable）”远远不够</strong>！根据 Lecture 11 的<strong>间隙定理（Gap Theorem）</strong>，存在全可计算函数 \(g(n)\)，使得在 \(g(n)\) 与 \(2^{g(n)}\) 之间没有任何新的可判定语言，即 \(\mathrm{TIME}(g(n)) = \mathrm{TIME}(2^{g(n)})\)，尽管 \(g(n)\log g(n) = o(2^{g(n)})\)。</li>
-    <li>此外，还需满足 \(f(n) \ge n\)（若 \(f(n) &lt; n\)，例如 \(f(n)=1, g(n)=\log n\)，图灵机连读完输入都不够，无法执行对角化模拟）。</li>
+    <li><strong>\(g(n)\) 必须是时间可构造的（Time-constructible）</strong>，即在输入 \(1^n\) 上可在 \(O(g(n))\) 步内算出 \(1^{g(n)}\)，而<strong>仅仅“\(g\) 可计算（computable）”远远不够</strong>！根据 Lecture 11 的<strong>间隙定理（Gap Theorem）</strong>，存在全可计算函数 \(h(n) \ge n\)，使得 \(\mathrm{TIME}(h(n)) = \mathrm{TIME}(2^{h(n)})\)；取 \(f = h,\; g = 2^h\)，则 \(f(n)\log f(n) = o(g(n))\) 且 \(g\) 可计算，但两个时间复杂性类完全相等！</li>
+    <li><strong>官方解答给出的第二个反例（次线性时间 \(o(n)\) 退化为 \(\mathrm{TIME}(1)\)）</strong>：取 \(h(n) = \max\{1, \lfloor \frac{1}{2}\log_2(n+1) \rfloor\}\)，同样令 \(f = h,\; g = 2^h = \Theta(\sqrt{n})\)。此时虽然 \(f(n)\log f(n) = o(g(n))\)，但在顺序读取输入的标准图灵机上，任何 \(o(n)\) 的最坏时间上界都意味着机器在固定长度 \(N\) 的所有输入上都在读完输入前停机，从而在一切更长输入上也在常数步内停机，故 \(\mathrm{TIME}(f(n)) = \mathrm{TIME}(g(n)) = \mathrm{TIME}(1)\)！</li>
   </ol>
 </div>
 
@@ -69,10 +70,10 @@ Review.add({
       </ul>
     </li>
   </ol>
-  <p><strong>(b) 紧渐近时间复杂度分析（\(\Theta(n \log n)\)）</strong>：</p>
+  <p><strong>(b) 紧渐近时间复杂度分析（\(\Theta(n \log n)\)，官方精确通项 \(\Theta(n(1 + \nu_2(n)))\)）</strong>：</p>
   <ul>
-    <li>每一轮从左到右扫描长度为 \(n\) 的输入区并从右向左返回最左端，恰好耗时 \(\Theta(n)\) 步。</li>
-    <li>每次循环将未标记字符个数除以 \(2\)。在最坏情况下（当 \(n = 2^k\) 时，需一直除到剩 \(1\) 个字符才停机），共执行 \(k + 1 = \log_2 n + 1 = \Theta(\log n)\) 轮扫描。</li>
+    <li>每一轮从左到右扫描长度为 \(n\) 的输入区并从右向左返回最左端，因为被划掉的 \(\mathtt{X}\) 仍留在原位，故每轮耗时均为 \(\Theta(n)\) 步。</li>
+    <li>设 \(\nu_2(n)\) 为整除 \(n\) 的最大 \(2\) 的幂指数（即 \(2^{\nu_2(n)} \mid n\)）。共执行 \(\nu_2(n)\) 轮减半扫描与 \(1\) 轮最终检查，故对任意 \(n \ge 1\)，运行时间为 \(\Theta\bigl(n(1 + \nu_2(n))\bigr)\)：当 \(n = 2^k\) 时达到最坏情况 \(\Theta(n \log n)\)（当 \(n\) 为奇数时仅需 \(\Theta(n)\)）。</li>
     <li>因此，该单带图灵机的最坏情况运行时间为
     \[
       T(n) = \Theta(n) \times \Theta(\log n) = \Theta(n \log n).
@@ -81,8 +82,12 @@ Review.add({
 </div>
 
 <div class="callout ex">
-  <strong>解法二（双带图灵机，二进制计数器法，最坏时间 \(\Theta(n)\)）</strong>
-  <p><strong>(a) 高层算法描述（2-tape TM \(M_2\)）</strong>：</p>
+  <strong>解法二（双带图灵机，双带交替折半复制法 / 二进制计数器法，最坏时间 \(\Theta(n)\)）</strong>
+  <p><strong>(a) 官方双带折半复制法（<code>PS5(Solutions).pdf</code>）</strong>：初始输入在带 1 上。每一轮扫描并擦除当前工作带上的连续非空块，同时<strong>每读到一对（2 个）符号就在另一条带上写下一个 \(1\)</strong>，形成长度减半的紧凑连续块；若本轮开始时恰有 1 个符号则接受，若有大于 1 的奇数个符号则拒绝，否则重置两磁头并<strong>交换两条带的角色</strong>进入下一轮。由于第 \(i\) 轮的块长仅为 \(n / 2^i\)，总步数为几何级数
+  \[
+    T(n) = \Theta\!\left(n + \frac{n}{2} + \frac{n}{4} + \cdots + 1\right) = \Theta(n).
+  \]</p>
+  <p><strong>(b) 备选双带二进制计数器法</strong>：</p>
   <ol>
     <li>在带 1 上从左向右单次扫描输入串 \(w\)；每读入带 1 上的一个字符，就在带 2 上维护的<strong>二进制计数器</strong>（低位在左端）上执行一次二进制加 \(1\)（模拟 PS2 Problem 4b 的二进制自增器）。</li>
     <li>当带 1 读完整个输入串 \(w\) 后，带 2 上恰好存储了串长 \(n = |w|\) 的二进制表示。</li>
