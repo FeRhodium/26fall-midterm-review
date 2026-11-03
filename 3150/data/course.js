@@ -5,11 +5,11 @@ Review.setup({
   other: { href: "../4010/", label: "CSC4010" },
   exam: {
     start: "2026-11-05T10:30:00+08:00",
-    when: "11 月 5 日（周四）10:30–11:50 笔试",
-    where: "Administration Building E101（课堂随堂笔试）",
-    badge: "期中 <b>20%</b> · 11/5 10:30 · 可带 <b>1 张双面</b>小抄"
+    when: "11 月 5 日（周四）10:30–12:00 笔试",
+    where: "Administrative Building E100",
+    badge: "期中 <b>20%</b> · 11/5 10:30 @ <b>AB E100</b> · 可带 <b>1 张双面</b>小抄"
   },
-  sheetKicker: "期中允许携带 1 张双面手写小抄（2026-10-27 公告）· 禁止电子设备 · 建议按本页提纲手写整理",
+  sheetKicker: "期中允许携带 1 张双面小抄（2026-10-27 公告）· 禁止电子设备 · <a href=\"materials/CSC3150_Midterm_Cheatsheet.pdf\" target=\"_blank\" rel=\"noopener\">下载 Typst 排版 A4 双面超密小抄 PDF</a>（<a href=\"materials/CSC3150_Midterm_Cheatsheet.typ\" target=\"_blank\" rel=\"noopener\">.typ 源码</a>）",
   groups: [
     { id: "lecture", label: "课程讲义 · Lecture 1–13", note: "按定义、机制、推导与实例的结构整理已发布的 lec01–lec13 全部课件内容（含 Lec11–12 调度与 EEVDF、Lec13 实时调度与死锁）。" },
     { id: "preview", label: "预习讲义 · Lecture 14", note: "对应课程表中期中前最后一讲：现代集群调度论文（Firmament / Gandiva / Synergy）。" },
@@ -21,8 +21,8 @@ Review.setup({
 <h1>期中复习</h1>
 <div class="facts">
   <div class="card"><dl>
-    <dt>考试时间</dt><dd>2026 年 11 月 5 日（周四）课堂时间（10:30–11:50，AB E101），11 月 3 日为 Midterm Review。</dd>
-    <dt>考试形式</dt><dd>闭卷笔试（占总评 20%）。可带 <b>1 张双面手写小抄</b>，禁止电子设备（2026-10-27 公告）。期末为上机考试（30%），4 个 xv6 项目共占 50%。</dd>
+    <dt>考试时间与地点</dt><dd>2026 年 11 月 5 日（周四）<b>10:30–12:00</b>，考场：<b>Administrative Building E100</b>（教授最新公告确认；11 月 3 日停课自习）。</dd>
+    <dt>考试形式与小抄</dt><dd>闭卷笔试（占总评 20%）。允许携带 <b>1 张双面笔记纸（one sheet of paper with notes on both sides）</b>，禁止任何电子设备。已整理好 <a href="materials/CSC3150_Midterm_Cheatsheet.pdf" target="_blank" rel="noopener"><b>A4 双面 Typst 小抄 PDF</b></a>（<a href="materials/CSC3150_Midterm_Cheatsheet.typ" target="_blank" rel="noopener"><code>.typ</code> 源码</a>）。</dd>
     <dt>考查范围</dt><dd>Lecture 1–14：操作系统概念、系统编程（线程、进程、文件、套接字、管道）、并发与同步（锁、信号量、管程、AI 系统并发）、CPU 调度（FCFS/RR/SRTF/MLFQ/Linux O(1)/Max-Min/Lottery/WFQ/EEVDF）、实时调度与死锁、集群调度论文。官方 <a href="#/c/sample">Sample Final 样卷</a>已发布（期中重点 Q1–Q5）。</dd>
     <dt>课程体系</dt><dd>基于 UC Berkeley CS162，参考教材为 OSTEP（Operating Systems: Three Easy Pieces）与 Silberschatz OS Concepts。</dd>
   </dl></div>
