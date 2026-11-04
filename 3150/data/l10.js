@@ -11,7 +11,7 @@ Review.add({
 <ul>
 <li><b>核心操作系统学术会议</b>：<b>SOSP</b>（ACM Symposium on Operating Systems Principles）、<b>OSDI</b>（USENIX Symposium on Operating Systems Design and Implementation）、<b>EuroSys</b>、<b>USENIX ATC</b>。相关领域顶会包括分布式与网络（NSDI、SIGCOMM）、体系结构（ASPLOS、ISCA、MICRO）、编程语言（PLDI、POPL）与系统安全（IEEE S&amp;P、CCS、USENIX Security、NDSS）。</li>
 <li><b>RaceBench（CCS'23）</b>：针对并发缺陷因依赖特定调度交错而难以稳定触发和观测的问题，在真实程序中构造可复现触发且触发后具有明确可观测状态的并发 bug 基准集，用于定量评估并发模糊测试（Fuzzing）与数据竞争检测工具。</li>
-<li><b>Go 语言真实并发缺陷研究（ASPLOS'19）</b>：对 Docker、Kubernetes 等大型 Go 系统的实证研究表明，并发缺陷可分为<b>阻塞型缺陷（Blocking Bugs，如互斥锁或通道等待形成死锁）</b>与<b>非阻塞型缺陷（Non-Blocking Bugs，如数据竞争）</b>；采用消息传递原语（<code>channel</code>）引发的并发 bug 数量并不低于传统共享内存锁，说明新原语同样需要严格的同步不变式设计。</li>
+<li><b>Go 语言真实并发缺陷研究（ASPLOS'19）</b>：对 Docker、Kubernetes 等大型 Go 系统的实证研究表明，并发缺陷可分为<b>阻塞型缺陷（Blocking Bugs，如互斥锁或通道等待形成死锁）</b>与<b>非阻塞型缺陷（Non-Blocking Bugs，如数据竞争）</b>；采用消息传递原语（`channel`）引发的并发 bug 数量并不低于传统共享内存锁，说明新原语同样需要严格的同步不变式设计。</li>
 </ul>
 
 <h2>2. 深度学习训练的三种并行范式</h2>
@@ -19,7 +19,7 @@ Review.add({
 <table>
 <thead><tr><th>并行方式</th><th>模型与数据切分方式</th><th>主要性能瓶颈</th></tr></thead>
 <tbody>
-<tr><td><b>数据并行（Data Parallelism）</b></td><td>每个工作节点（Worker）持有完整的模型权重副本，处理不同的训练数据子集，每步通过 <code>AllReduce</code> 汇总全局梯度 \(\nabla W=\sum_i\nabla W_i\)</td><td>每一步迭代都必须跨节点同步全部模型参数的梯度，在大模型下通信开销极高</td></tr>
+<tr><td><b>数据并行（Data Parallelism）</b></td><td>每个工作节点（Worker）持有完整的模型权重副本，处理不同的训练数据子集，每步通过 `AllReduce` 汇总全局梯度 \(\nabla W=\sum_i\nabla W_i\)</td><td>每一步迭代都必须跨节点同步全部模型参数的梯度，在大模型下通信开销极高</td></tr>
 <tr><td><b>朴素模型并行（Model Parallelism）</b></td><td>将模型的不同层切分到不同 Worker 上，仅存一份权重；前向激活值与反向梯度在相邻 Worker 间点对点传递</td><td>由于单个微批次（minibatch）的前后向存在严格的数据依赖，<b>同一时刻只有一个 Worker 处于计算状态</b>，其余设备空闲，硬件利用率极低</td></tr>
 <tr><td><b>流水线并行（Pipeline Parallelism，PipeDream）</b></td><td>结合模型并行与数据并行，将连续多个 minibatch 依次注入多阶段模型流水线，使不同阶段同时处理不同的 minibatch</td><td>需解决阶段负载均衡划分、前向/后向交替调度、以及多版本权重一致性三个问题</td></tr>
 </tbody>
@@ -29,7 +29,7 @@ Review.add({
 <h2>3. PipeDream（SOSP'19）：通用流水线并行训练系统</h2>
 <p>PipeDream 通过三项机制消除朴素模型并行的设备空闲并降低数据并行的通信开销：</p>
 <ol>
-<li><b>阶段划分与按需复制（Stage Partitioning with Replication）</b>：使用性能分析器测量每一层的计算耗时、激活张量大小与参数量，通过优化算法将层划分为多个流水线阶段，满足两条目标：(i) <b>各阶段的计算时间 \(t_1,t_2,\dots\) 尽可能相等</b>（消除慢阶段造成的流水线等待）；(ii) <b>阶段边界处的激活传输量 \(t^{\text{comm}}_{k\to k+1}\) 尽可能小</b>。同时允许对计算耗时长的阶段进行数据并行复制（如配置 <code>2-3-2-1</code> 表示四个阶段分别部署 2、3、2、1 个副本）。</li>
+<li><b>阶段划分与按需复制（Stage Partitioning with Replication）</b>：使用性能分析器测量每一层的计算耗时、激活张量大小与参数量，通过优化算法将层划分为多个流水线阶段，满足两条目标：(i) <b>各阶段的计算时间 \(t_1,t_2,\dots\) 尽可能相等</b>（消除慢阶段造成的流水线等待）；(ii) <b>阶段边界处的激活传输量 \(t^{\text{comm}}_{k\to k+1}\) 尽可能小</b>。同时允许对计算耗时长的阶段进行数据并行复制（如配置 `2-3-2-1` 表示四个阶段分别部署 2、3、2、1 个副本）。</li>
 <li><b>1F1B（One-Forward-One-Backward）双向调度</b>：在启动填充期之后进入稳定状态，每个 Worker <b>严格交替执行一次前向传播和一次反向传播</b>，使所有 GPU 持续保持满载计算，且反向传播算出的梯度可立即用于更新参数。</li>
 <li><b>权重版本暂存（Weight Stashing）</b>：在流水线中，当第 \(n\) 个 minibatch 在某阶段执行前向传播时使用的是权重版本 \(W^{(n)}\)；但当该 minibatch 的反向传播回到同一阶段时，后续 minibatch 的反向传播已经将该阶段的权重更新为 \(W^{(n+p)}\)。若用新权重 \(W^{(n+p)}\) 计算第 \(n\) 个批次的梯度，会导致数学上的梯度计算错误。<b>Weight Stashing 要求每个阶段为尚在流水线中未完成反向传播的 minibatch 暂存其前向传播时所使用的权重版本 \(W^{(n)}\) 与中间激活值</b>，从而严格保证同一 minibatch 的前向与反向传播使用完全相同的权重版本。</li>
 </ol>
@@ -58,7 +58,7 @@ Review.add({
 <li><b>缺陷 1：Prefill–Decode 相互干扰</b>。在同批次中，长 Prompt 的 Prefill 会大幅拉长该批次的执行时间，导致同批次中的 Decode 请求等待时间激增（破坏 TPOT）；反之 Decode 请求也会占用显存与带宽，延缓 Prefill。</li>
 <li><b>缺陷 2：资源配比与并行策略强耦合</b>。计算密集的 Prefill 与访存密集的 Decode 对张量并行（TP）和流水线并行（PP）的最优配置截然不同，共置部署迫使两者使用同一种并行策略与相同的实例数量。</li>
 </ul>
-<p><b>DistServe 的分离设计</b>：将集群划分为独立的 <b>Prefill 实例</b>与 <b>Decode 实例</b>（如 <code>2P1D</code>）：请求先在 Prefill 实例上完成首 token 生成，随后将生成的 KV Cache 传输至 Decode 实例完成后续自回归生成。为降低跨实例传输 KV Cache 的网络开销，在节点间带宽受限（低节点亲和性）的集群中，DistServe 的放置算法将<b>Prefill 实例与 Decode 实例的同一流水线阶段部署在同一物理节点内部</b>，使 KV Cache 仅通过节点内高速互连（NVLink）传输。</p>
+<p><b>DistServe 的分离设计</b>：将集群划分为独立的 <b>Prefill 实例</b>与 <b>Decode 实例</b>（如 `2P1D`）：请求先在 Prefill 实例上完成首 token 生成，随后将生成的 KV Cache 传输至 Decode 实例完成后续自回归生成。为降低跨实例传输 KV Cache 的网络开销，在节点间带宽受限（低节点亲和性）的集群中，DistServe 的放置算法将<b>Prefill 实例与 Decode 实例的同一流水线阶段部署在同一物理节点内部</b>，使 KV Cache 仅通过节点内高速互连（NVLink）传输。</p>
 
 <h2>考前清单</h2>
 <ul>
