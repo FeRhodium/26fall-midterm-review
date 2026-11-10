@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheapest Cable Network</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Concept: a network-engineer's map table. Cool paper ground, faint survey grid under the graph,
+   kept cables in deep teal, dead ends in rust, loops in amber. Mono for every number. */
+:root{
+  --display:'Bricolage Grotesque','Avenir Next','Segoe UI',system-ui,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F3F5F9; --ink:#111B2A; --muted:#566376; --line:#D2D9E2;
+  --kept:#0B6F6A; --kept-soft:#D2ECE9; --on-kept:#FFFFFF;
+  --skip:#B23A24; --skip-soft:#F8DED7;
+  --loop:#A86800; --loop-soft:#FBEAC6;
+  --ga:#2457C5; --ga-soft:#DAE5FA; --gb:#9A3A86; --gb-soft:#F1DAEC;
+  --idle:#A3AEBC; --glow:rgba(36,87,197,.20); --grid:rgba(17,27,42,.06); --focus:#2457C5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141D; --surface:#151F2C; --surface-2:#1B2736; --ink:#E7EEF6; --muted:#9AA9BC; --line:#2A394C;
+    --kept:#3CC4B8; --kept-soft:#143F3C; --on-kept:#06201E;
+    --skip:#F27F68; --skip-soft:#45211A;
+    --loop:#F0B442; --loop-soft:#3E3012;
+    --ga:#7FA6FF; --ga-soft:#1D2D52; --gb:#DE92D3; --gb-soft:#46223F;
+    --idle:#52627A; --glow:rgba(127,166,255,.28); --grid:rgba(231,238,246,.06); --focus:#7FA6FF;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141D; --surface:#151F2C; --surface-2:#1B2736; --ink:#E7EEF6; --muted:#9AA9BC; --line:#2A394C;
+  --kept:#3CC4B8; --kept-soft:#143F3C; --on-kept:#06201E;
+  --skip:#F27F68; --skip-soft:#45211A;
+  --loop:#F0B442; --loop-soft:#3E3012;
+  --ga:#7FA6FF; --ga-soft:#1D2D52; --gb:#DE92D3; --gb-soft:#46223F;
+  --idle:#52627A; --glow:rgba(127,166,255,.28); --grid:rgba(231,238,246,.06); --focus:#7FA6FF;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+.page{max-width:1120px;margin:0 auto;padding-block:22px 44px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{margin:0 0 6px;font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font:700 clamp(28px,5vw,40px)/1.05 var(--display);letter-spacing:-.015em;text-wrap:balance}
+.lede{margin:10px 0 0;max-width:62ch;color:var(--muted);font-size:16px}
+.tabs{display:flex;gap:4px;margin-top:22px;padding:4px;width:fit-content;max-width:100%;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px}
+.tab{flex:none;border:0;background:transparent;color:var(--muted);padding:8px 14px;border-radius:9px;
+  font:600 14px var(--body);cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.method{margin:14px 0 16px;max-width:72ch;font-size:16px}
+.stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}
+.card h2{margin:0 0 10px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.side{display:grid;gap:18px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.stepno{font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stepname{font:700 22px var(--display);margin-left:8px}
+.chips{display:flex;gap:8px}
+.chip{display:inline-flex;gap:6px;align-items:baseline;padding:3px 10px;border:1px solid var(--line);border-radius:999px;
+  font:500 12px var(--body);color:var(--muted);background:var(--surface-2)}
+.chip b{font:600 14px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.graph{margin-top:10px;padding:8px;border:1px solid var(--line);border-radius:10px;background-color:var(--surface-2);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px}
+.graph svg{display:block;width:100%;max-width:540px;height:auto;margin:0 auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px;color:var(--muted)}
+.lg{display:inline-flex;align-items:center;gap:7px}
+.sw{display:inline-block;width:24px;height:0;border-top:5px solid var(--idle)}
+.sw.kept{border-color:var(--kept)} .sw.loop{border-color:var(--loop)}
+.sw.skipped{border-top:3px dashed var(--skip)} .sw.idle{border-top-width:2.5px}
+.sw.cross{border-color:var(--ink);border-top-width:4px} .sw.light{border-color:var(--kept);border-top-width:8px} .sw.halo{border-color:var(--kept-soft);border-top-width:9px}
+.dot{display:inline-block;width:13px;height:13px;border-radius:50%;border:2px solid}
+.dot.ga{background:var(--ga-soft);border-color:var(--ga)} .dot.gb{background:var(--gb-soft);border-color:var(--gb)}
+.caption{margin-top:12px;padding:12px 14px;background:var(--surface-2);border-radius:10px;font-size:16px;line-height:1.55;min-height:6.4em}
+.caption b{font-family:var(--mono);font-weight:600}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 18px;border-radius:10px;
+  font:600 15px var(--body);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn.primary{background:var(--kept);border-color:var(--kept);color:var(--on-kept)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08)}
+.btn:disabled{opacity:.4;cursor:default}
+.hint{margin-left:auto;font-size:13px;color:var(--muted)}
+.progress{display:flex;gap:4px;margin-top:14px}
+.progress i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.progress i.done{background:var(--kept)}
+.note{margin:0 0 8px;font-size:14px;color:var(--muted)}
+.forest{display:block;margin:0 auto;height:auto}
+.ledger{display:grid;gap:2px}
+.row{display:grid;grid-template-columns:22px 70px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px}
+.row.now{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line)}
+.row .ix{font:500 12px var(--mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.row .nm{font:600 15px var(--mono)} .row .nm span{color:var(--muted);font-weight:500;margin-left:6px;font-variant-numeric:tabular-nums}
+.row .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.row .bar i{display:block;height:100%;background:var(--idle)}
+.st{font:600 12px var(--body);padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.st.kept{background:var(--kept-soft);border-color:transparent;color:var(--kept)}
+.st.skipped,.st.removed{background:var(--skip-soft);border-color:transparent;color:var(--skip)}
+.st.light{background:var(--kept);border-color:transparent;color:var(--on-kept)}
+.row.pending{opacity:.55}
+.toggles{display:grid;gap:8px}
+.tog{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:10px 12px;border-radius:10px;font:500 14px var(--body);cursor:pointer}
+.tog .box{flex:none;width:18px;height:18px;border-radius:5px;border:2px solid var(--muted)}
+.tog[aria-pressed="true"]{border-color:var(--kept);background:var(--kept-soft)}
+.tog[aria-pressed="true"] .box{background:var(--kept);border-color:var(--kept)}
+.history{margin-top:22px}
+.history h2{margin:0 0 10px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.strip{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px}
+.thumb{flex:none;width:max-content;min-width:124px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px;cursor:pointer;color:var(--ink)}
+.thumb svg{display:block;margin:0 auto}
+.thumb span{display:block;margin-top:4px;text-align:center;font:500 12px var(--mono);color:var(--muted)}
+.thumb.on{outline:2px solid var(--ink);outline-offset:1px}
+.howto{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 18px}
+.howto summary{cursor:pointer;padding:12px 0;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.howto summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+.story{padding:0 0 14px;max-width:78ch}
+.story p{margin:0 0 8px;font-size:15px;color:var(--ink)}
+.howto-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px 28px;padding:0 0 16px}
+.story h3,.howto h3{margin:0 0 6px;font:700 17px var(--display)}
+.howto p,.howto li{margin:0;font-size:14.5px;color:var(--muted)}
+.howto ul{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.howto b{color:var(--ink);font-weight:600}
+.kbd{display:inline-block;padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font:600 12.5px var(--body);color:var(--ink)}
+.total{margin-top:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+  font-size:15px;color:var(--muted);display:block}
+.total .sum{font:600 15px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.total[hidden]{display:none}
+.total.done{background:var(--kept-soft);border-color:var(--kept);color:var(--ink)}
+.total.done b{color:var(--kept)}
+/* svg */
+.edge{fill:none;stroke-linecap:round}
+.e-idle{stroke:var(--idle);stroke-width:2.5}
+.e-faint{stroke:var(--idle);stroke-width:2;opacity:.5}
+.e-kept{stroke:var(--kept);stroke-width:6}
+.e-skipped,.e-removed{stroke:var(--skip);stroke-width:3;stroke-dasharray:7 7}
+.e-loop{stroke:var(--loop);stroke-width:6}
+.e-cross{stroke:var(--ink);stroke-width:4.5}
+.e-light{stroke:var(--kept);stroke-width:8}
+.e-halo{stroke:var(--kept-soft);stroke-width:17}
+.e-glow{stroke:var(--glow);stroke-width:17}
+.mini .e-idle,.mini .e-faint{stroke-width:4}
+.mini .e-skipped,.mini .e-removed{stroke-width:5}
+.lab rect{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.lab text{font:600 13px var(--mono);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.l-idle text,.l-faint text{fill:var(--muted)}
+.l-kept rect,.l-light rect{stroke:var(--kept)} .l-kept text,.l-light text{fill:var(--kept)}
+.l-skipped rect,.l-removed rect{stroke:var(--skip)} .l-skipped text,.l-removed text{fill:var(--skip)}
+.l-loop rect{stroke:var(--loop)} .l-loop text{fill:var(--loop)}
+.node circle{fill:var(--surface);stroke:var(--ink);stroke-width:2.5}
+.node text{font:700 17px var(--display);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.mini .node text{font-size:27px}
+.node.ga circle{fill:var(--ga-soft);stroke:var(--ga)} .node.gb circle{fill:var(--gb-soft);stroke:var(--gb)}
+.fnode circle{fill:var(--surface);stroke:var(--muted);stroke-width:2}
+.fnode.root circle{stroke:var(--kept);stroke-width:3}
+.fnode.hl circle{fill:var(--loop-soft);stroke:var(--loop)}
+.fnode.moved circle{fill:var(--kept-soft)}
+.fnode text{font:700 15px var(--display);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.forest.mini .fnode text{font-size:10px}
+.rk{font:500 12px var(--mono);fill:var(--muted);text-anchor:middle}
+.farrow{fill:none;stroke:var(--muted);stroke-width:2}
+.farrow.new{stroke:var(--kept);stroke-width:3.2}
+.mk{fill:var(--muted)} .mk-new{fill:var(--kept)}
+@media (max-width:860px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .howto-grid{grid-template-columns:minmax(0,1fr)}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:no-preference){
+  .edge,.fnode circle{transition:stroke .15s,fill .15s}
+}
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">CSC4120 · Greedy algorithms · pre-lecture</p>
+    <h1>Cheapest Cable Network</h1>
+    <p class="lede">One network to build, six cities, nine possible cables. Read the story below, then step through each method. If you are following a chat session, answer there first and press Next afterwards.</p>
+  </header>
+
+  <details class="howto" open>
+    <summary>Before you start</summary>
+    <div class="story">
+      <h3>The story</h3>
+      <p>Six cities want to be joined into one network. Nine cables could be laid, and the drawing below shows which two cities each cable would join. The number on a cable is its <b>weight</b>: what it costs to lay.</p>
+      <p>The network must let every city reach every other city, directly or through other cities, and we want to pay as little as possible. A cable between two cities that are already connected adds nothing and only closes a loop, so it is wasted. The tabs below try different ways of choosing which cables to lay.</p>
+    </div>
+    <div class="howto-grid">
+      <div>
+        <h3>Words used here</h3>
+        <ul>
+          <li><b>City</b>: a circle with a letter, A to F.</li>
+          <li><b>Cable</b>: a line joining two cities. Its number is its weight.</li>
+          <li><b>Kept</b>: a cable we lay. <b>Skipped</b>: a cable we decide not to lay. <b>Removed</b>: a cable laid and then taken out again.</li>
+          <li><b>Loop</b>: a ring of cables that comes back to the city it started from.</li>
+          <li><b>Cut</b>: a split of the cities into two groups. The cables across the cut join a city in one group to a city in the other.</li>
+          <li><b>Allowed cut</b>: a cut that no kept cable crosses, meaning no kept cable has one end in each group.</li>
+          <li><b>Spanning tree</b>: cables that connect all the cities with no loop. Six cities need five cables.</li>
+          <li><b>Total weight</b>: the weights of the kept cables added up.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>The tabs choose the method</h3>
+        <ul>
+          <li><b>Any order</b>: go down a list of cables in the given order. Lay a cable unless its two cities are already connected.</li>
+          <li><b>Cheapest first</b>: the same method with the list sorted from the lightest cable to the heaviest.</li>
+          <li><b>Repair loops</b>: lay every cable. When a loop appears, take out the heaviest cable on it.</li>
+          <li><b>Cut method</b>: repeatedly choose an allowed cut and keep the lightest cable across it.</li>
+          <li>Take them from left to right, or follow your chat session. Each tab keeps its own place.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>The buttons move through it</h3>
+        <ul>
+          <li><b>Next</b> shows the next cable: whether it is kept, skipped or removed, and the total weight so far. At the end of a method it moves on to the next tab.</li>
+          <li><b>Back</b> goes one step back. <b>Restart</b> returns the current tab to its first step.</li>
+          <li>The <b>Earlier steps</b> strip at the bottom keeps a small picture of every step you have seen. Click one to jump back to it.</li>
+          <li>On the <b>Cut method</b> tab, the two buttons in <b>Check your answer</b> reveal the lightest cable across the cut (and keep it) and compare with the tree from the cheapest-first run.</li>
+          <li>The <span class="kbd">←</span> and <span class="kbd">→</span> keys also step back and forward.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <div class="tabs" role="tablist" id="tabs" aria-label="Methods"></div>
+  <p class="method" id="method"></p>
+
+  <main class="stage">
+    <section class="card" aria-label="Current step">
+      <div class="card-head">
+        <div><span class="stepno" id="stepno"></span><span class="stepname" id="stepname"></span></div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="graph" id="graph"></div>
+      <div class="legend" id="legend"></div>
+      <div class="total" id="total" aria-live="polite"></div>
+      <div class="caption" id="caption" aria-live="polite"></div>
+      <div class="controls">
+        <button class="btn" id="back" type="button">Back</button>
+        <button class="btn primary" id="next" type="button">Next</button>
+        <button class="btn" id="reset" type="button">Restart</button>
+        <span class="hint">Arrow keys also work</span>
+      </div>
+      <div class="progress" id="progress" aria-hidden="true"></div>
+    </section>
+
+    <aside class="side">
+      <section class="card" id="cutCard" hidden>
+        <h2>Check your answer</h2>
+        <div class="toggles">
+          <button class="tog" id="togLight" type="button" aria-pressed="false"><span class="box"></span>Show the lightest cable across the cut</button>
+          <button class="tog" id="togTree" type="button" aria-pressed="false"><span class="box"></span>Show the cheapest-first tree</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2 id="ledgerTitle"></h2>
+        <div class="ledger" id="ledger"></div>
+      </section>
+    </aside>
+  </main>
+
+  <section class="history" aria-label="Earlier steps">
+    <h2>Earlier steps</h2>
+    <div class="strip" id="strip"></div>
+  </section>
+</div>
+
+<script>
+(function(){
+/* ---------- data: the running graph ---------- */
+const NODES = { A: [50, 40], B: [190, 40], C: [330, 40], D: [50, 250], E: [190, 250], F: [330, 250] };
+const EDGES = [
+  { id: 'AB', u: 'A', v: 'B', w: 2 },
+  { id: 'BC', u: 'B', v: 'C', w: 5 },
+  { id: 'AD', u: 'A', v: 'D', w: 7 },
+  { id: 'AE', u: 'A', v: 'E', w: 4 },
+  { id: 'BE', u: 'B', v: 'E', w: 3 },
+  { id: 'CE', u: 'C', v: 'E', w: 6 },
+  { id: 'CF', u: 'C', v: 'F', w: 8 },
+  { id: 'DE', u: 'D', v: 'E', w: 1 },
+  { id: 'EF', u: 'E', v: 'F', w: 9 },
+];
+const E = Object.fromEntries(EDGES.map(e => [e.id, e]));
+const ANY = ['AD', 'AB', 'BC', 'CF', 'DE', 'BE', 'AE', 'CE', 'EF'];
+const SORTED = [...EDGES].sort((a, b) => a.w - b.w).map(e => e.id);
+
+/* ---------- helpers ---------- */
+const cname = id => `${id} (${E[id].w})`;
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+// path (list of edge ids) joining a and b using only the given edges, or null
+function pathBetween(ids, a, b) {
+  const adj = {};
+  for (const id of ids) {
+    const e = E[id];
+    (adj[e.u] = adj[e.u] || []).push([e.v, id]);
+    (adj[e.v] = adj[e.v] || []).push([e.u, id]);
+  }
+  const prev = { [a]: null };
+  const q = [a];
+  while (q.length) {
+    const x = q.shift();
+    if (x === b) break;
+    for (const [y, id] of adj[x] || []) {
+      if (!(y in prev)) { prev[y] = [x, id]; q.push(y); }
+    }
+  }
+  if (!(b in prev)) return null;
+  const path = [];
+  let x = b;
+  while (prev[x]) { path.unshift(prev[x][1]); x = prev[x][0]; }
+  return path;
+}
+// node sequence when walking the path from a
+function route(a, path) {
+  let cur = a;
+  const r = [a];
+  for (const id of path) { const e = E[id]; cur = e.u === cur ? e.v : e.u; r.push(cur); }
+  return r;
+}
+
+/* ---------- sections 1 and 2: keep a cable unless it closes a loop ---------- */
+function buildKeep(order, summary) {
+  const states = [];
+  const kept = [];
+  const status = {};
+  order.forEach(id => (status[id] = 'pending'));
+  const cost = () => kept.reduce((s, id) => s + E[id].w, 0);
+  states.push({
+    status: { ...status }, cur: null, hl: [], kept: [], cost: 0, short: 'Start',
+    text: 'Six cities, no cables kept yet. The cable list shows the order in which the cables are looked at. Press Next to look at the first one.',
+  });
+  order.forEach(id => {
+    const e = E[id];
+    const p = pathBetween(kept, e.u, e.v);
+    let text, hl = [];
+    if (p) {
+      status[id] = 'skipped';
+      hl = p;
+      text = `<b>${cname(id)}.</b> ${e.u} and ${e.v} are already joined through ${route(e.u, p).join('–')}. Keeping ${id} would close a loop, so skip it.`;
+    } else {
+      status[id] = 'kept';
+      kept.push(id);
+      text = `<b>${cname(id)}.</b> ${e.u} and ${e.v} are not joined yet, so keep it.`;
+    }
+    states.push({ status: { ...status }, cur: id, hl, kept: [...kept], cost: cost(), short: `${id} ${p ? 'skip' : 'keep'}`, text });
+  });
+  const last = states[states.length - 1];
+  last.text += ' ' + summary(last.cost, last.kept.length);
+  return states;
+}
+
+/* ---------- section 3: add every cable, then drop the heaviest cable of any loop ---------- */
+function buildRepair(order, kruskalCost) {
+  const states = [];
+  let forest = [];
+  const status = {};
+  order.forEach(id => (status[id] = 'pending'));
+  const cost = () => forest.reduce((s, id) => s + E[id].w, 0);
+  states.push({
+    status: { ...status }, cur: null, hl: [], removed: null, kept: [], cost: 0, short: 'Start',
+    text: 'Same list as the first run. This time a cable that closes a loop is not thrown away: add it, then remove the heaviest cable on the loop.',
+  });
+  order.forEach(id => {
+    const e = E[id];
+    const p = pathBetween(forest, e.u, e.v);
+    let text, hl = [], removed = null, short;
+    if (!p) {
+      status[id] = 'kept';
+      forest.push(id);
+      short = `${id} add`;
+      text = `<b>${cname(id)}.</b> ${e.u} and ${e.v} are not joined yet. Add it; no loop appears.`;
+    } else {
+      const loop = [...p, id];
+      const loopRoute = `${route(e.u, p).join('–')}–${e.u}`;
+      const heavy = loop.reduce((a, b) => (E[a].w >= E[b].w ? a : b));
+      const listing = loop.map(x => `${x} ${E[x].w}`).join(', ');
+      status[id] = 'kept';
+      if (heavy === id) {
+        status[id] = 'removed';
+        removed = id;
+        short = `${id} drop`;
+        text = `<b>${cname(id)}.</b> Adding it closes the loop ${loopRoute} (${listing}). The heaviest cable on the loop is ${id} itself, so it is the one removed.`;
+      } else {
+        status[heavy] = 'removed';
+        removed = heavy;
+        forest = forest.filter(x => x !== heavy);
+        forest.push(id);
+        short = `${id} swap`;
+        text = `<b>${cname(id)}.</b> Adding it closes the loop ${loopRoute} (${listing}). The heaviest cable on the loop is <b>${cname(heavy)}</b>, so remove that one.`;
+      }
+      hl = loop.filter(x => x !== removed);
+    }
+    states.push({ status: { ...status }, cur: id, hl, removed, kept: [...forest], cost: cost(), short, text });
+  });
+  const last = states[states.length - 1];
+  last.text += ` All nine cables looked at. The tree has ${last.kept.length} cables and total weight ${last.cost}. The sorted list gave ${kruskalCost}.`;
+  return states;
+}
+
+/* ---------- section 4: the cut method ---------- */
+function buildCutMethod() {
+  const nodes = Object.keys(NODES);
+  const seq = [
+    { S: ['F'] },
+    { S: ['C'], bad: true },
+    { S: ['A', 'B', 'D', 'E'] },
+    { S: ['A'] },
+    { S: ['A', 'B', 'C', 'F'] },
+    { S: ['D'] },
+  ];
+  const kept = [];
+  const states = [{
+    S: null, T: null, cross: [], lightest: null, flag: [], bad: false, keptBefore: [], label: '', short: 'Start', cur: null,
+    text: 'Nothing is kept yet. A <b>cut</b> splits the cities into two groups. The cables across the cut join a city in one group to a city in the other. The method: choose a cut that no kept cable crosses, keep the lightest cable across it, and repeat until all the cities are connected.',
+  }];
+  let n = 0;
+  seq.forEach(item => {
+    const set = new Set(item.S);
+    const T = nodes.filter(x => !set.has(x));
+    const cross = EDGES.filter(e => set.has(e.u) !== set.has(e.v)).map(e => e.id);
+    const flag = kept.filter(id => cross.includes(id));
+    const label = `{${item.S.join(', ')}} | {${T.join(', ')}}`;
+    const list = cross.map(x => `${x} ${E[x].w}`).join(', ');
+    if (item.bad) {
+      if (!flag.length) throw new Error('bad cut has no kept cable crossing it');
+      const why = flag.map(id => `${id} joins ${E[id].u} and ${E[id].v}, which are in different groups`).join('; ');
+      states.push({
+        S: item.S, T, cross, lightest: null, flag, bad: true, keptBefore: [...kept], label, short: 'Not allowed', cur: null,
+        text: `<b>Cut ${label}.</b> This cut is <b>not allowed</b>: the kept cable ${why}. A cut must not be crossed by a kept cable. Across it: ${list}.`,
+      });
+      return;
+    }
+    if (flag.length) throw new Error('allowed cut is crossed by a kept cable');
+    n += 1;
+    const lightest = cross.reduce((a, b) => (E[a].w < E[b].w ? a : b));
+    const intro = kept.length === 0
+      ? 'Nothing is kept yet, so every cut is allowed.'
+      : `No kept cable (${kept.join(', ')}) has one end in each group, so this cut is allowed.`;
+    states.push({
+      S: item.S, T, cross, lightest, flag: [], bad: false, keptBefore: [...kept], label, short: `Cut ${n}`, cur: null,
+      text: `<b>Cut ${label}.</b> ${intro} Across it: ${list}.`,
+    });
+    kept.push(lightest);
+  });
+  return states;
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { NODES, EDGES, E, ANY, SORTED, pathBetween, route, buildKeep, buildRepair, buildCutMethod, cname };
+}
+
+
+const ANY_S = buildKeep(ANY, (c, n) => `All nine cables looked at: ${n} kept, no loop, every city connected. Total weight ${c}.`);
+const ANY_COST = ANY_S[ANY_S.length - 1].cost;
+const SORT_S = buildKeep(SORTED, (c, n) => `All nine cables looked at: ${n} kept, total weight ${c}, against ${ANY_COST} for the first list. Taking the cables from cheapest to most expensive is Kruskal's algorithm.`);
+const KR = SORT_S[SORT_S.length - 1];
+const REP_S = buildRepair(ANY, KR.cost);
+const CUT_S = buildCutMethod();
+
+const SECTIONS = [
+  { key:'any',    label:'Any order',      states:ANY_S,  order:ANY,
+    method:'Go down the list in this order. Lay (keep) a cable unless its two cities are already connected by the cables kept so far, because that cable would close a loop.',
+    legend:[['kept','Kept'],['skipped','Skipped: closes a loop'],['loop','Already joins the two cities'],['idle','Not looked at yet']] },
+  { key:'sorted', label:'Cheapest first', states:SORT_S, order:SORTED,
+    method:'The same method, with the list sorted from the lightest cable to the heaviest. Taking cables in increasing order of weight is known as Kruskal\u2019s algorithm.',
+    legend:[['kept','Kept'],['skipped','Skipped: closes a loop'],['loop','Already joins the two cities'],['idle','Not looked at yet']] },
+  { key:'repair', label:'Repair loops',   states:REP_S,  order:ANY,
+    method:'Add every cable in the first list\u2019s order. When a cable closes a loop, take out the heaviest cable on that loop, which may be the one just added.',
+    legend:[['kept','In the tree'],['loop','On the loop just closed'],['skipped','Removed'],['idle','Not looked at yet']] },
+  { key:'cuts',   label:'Cut method',     states:CUT_S,  order:null,
+    method:'Start with no cables kept. Choose an allowed cut, which is a split of the cities that no kept cable crosses, and keep the lightest cable across it. Repeat until all the cities are connected.',
+    legend:null },
+];
+
+const $ = id => document.getElementById(id);
+const ui = { sec:0, idx:SECTIONS.map(() => 0), seen:SECTIONS.map(() => 0), light:false, tree:false };
+const TREE = new Set(KR.kept);
+
+/* ---------- drawing ---------- */
+function graphSVG(sec, st, o) {
+  o = o || {};
+  const mini = !!o.mini, rN = mini ? 22 : 17;
+  const prio = ['faint','idle','skipped','removed','kept','cross','loop','light'];
+  const items = EDGES.map(e => {
+    let c = 'idle';
+    if (sec === 'cuts') {
+      c = st.keptBefore.includes(e.id) ? 'kept' : st.cross.includes(e.id) ? 'cross' : 'faint';
+      if (st.flag.includes(e.id)) c = 'loop';
+      if (c === 'cross' && o.light && e.id === st.lightest) c = 'light';
+    } else {
+      const s = st.status[e.id];
+      c = s === 'kept' ? 'kept' : s === 'skipped' ? 'skipped' : s === 'removed' ? 'removed' : 'idle';
+      if (st.hl && st.hl.includes(e.id) && s !== 'removed') c = 'loop';
+    }
+    return { e, c };
+  }).sort((a, b) => prio.indexOf(a.c) - prio.indexOf(b.c));
+  const P = n => NODES[n];
+  const line = (e, cls) => `<line class="edge ${cls}" x1="${P(e.u)[0]}" y1="${P(e.u)[1]}" x2="${P(e.v)[0]}" y2="${P(e.v)[1]}"/>`;
+  let s = `<svg class="${mini ? 'mini' : ''}" viewBox="0 0 380 290" ${mini ? 'width="112"' : ''} role="img" aria-label="${o.label || 'Graph of six cities and nine cables'}">`;
+  if (sec === 'cuts' && o.tree) items.forEach(({ e }) => { if (TREE.has(e.id)) s += line(e, 'e-halo'); });
+  if (st.cur && !mini) s += line(E[st.cur], 'e-glow');
+  items.forEach(({ e, c }) => { s += line(e, 'e-' + c); });
+  if (!mini) {
+    items.forEach(({ e, c }) => {
+      const mx = (P(e.u)[0] + P(e.v)[0]) / 2, my = (P(e.u)[1] + P(e.v)[1]) / 2;
+      s += `<g class="lab l-${c}"><rect x="${mx - 14}" y="${my - 11}" width="28" height="22" rx="11"/><text x="${mx}" y="${my + 0.5}">${e.w}</text></g>`;
+    });
+  }
+  Object.keys(NODES).forEach(n => {
+    const g = sec === 'cuts' && st.S ? (st.S.includes(n) ? ' ga' : ' gb') : '';
+    s += `<g class="node${g}"><circle cx="${P(n)[0]}" cy="${P(n)[1]}" r="${rN}"/><text x="${P(n)[0]}" y="${P(n)[1] + 1}">${n}</text></g>`;
+  });
+  return s + '</svg>';
+}
+
+/* ---------- panels ---------- */
+const NCITY = Object.keys(NODES).length;
+function viewOf(S, st) {
+  if (S.key !== 'cuts') return st;
+  const kept = ui.light && st.lightest ? [...st.keptBefore, st.lightest] : st.keptBefore;
+  return { kept, cost: kept.reduce((a, id) => a + E[id].w, 0) };
+}
+function legendHTML(S, st) {
+  if (S.key === 'cuts') {
+    let h = '';
+    if (st.S) h += `<span class="lg"><i class="dot ga"></i>Group one</span><span class="lg"><i class="dot gb"></i>Group two</span><span class="lg"><i class="sw cross"></i>Cable across the cut</span>`;
+    h += `<span class="lg"><i class="sw kept"></i>Kept so far</span>`;
+    if (st.bad) h += `<span class="lg"><i class="sw loop"></i>Kept cable that crosses the cut</span>`;
+    if (ui.light && st.lightest) h += `<span class="lg"><i class="sw light"></i>Lightest across: kept next</span>`;
+    if (ui.tree) h += `<span class="lg"><i class="sw halo"></i>In the cheapest-first tree</span>`;
+    return h;
+  }
+  return S.legend.map(([k, t]) => `<span class="lg"><i class="sw ${k}"></i>${t}</span>`).join('');
+}
+
+function ledgerHTML(S, st) {
+  if (S.key === 'cuts') {
+    if (!st.cross.length) return '<p class="note">No cut has been chosen yet.</p>';
+    return st.cross.map((id, i) => {
+      const chips = [];
+      if (st.flag.includes(id)) chips.push('<span class="st removed">kept, crosses the cut</span>');
+      if (ui.light && id === st.lightest) chips.push('<span class="st light">lightest</span>');
+      if (ui.tree) chips.push(TREE.has(id) ? '<span class="st kept">in tree</span>' : '<span class="st">not in tree</span>');
+      return `<div class="row"><span class="ix">${i + 1}</span><span class="nm">${id}<span>${E[id].w}</span></span><span class="bar"><i style="width:${E[id].w / 9 * 100}%"></i></span><span style="display:flex;gap:6px">${chips.join('')}</span></div>`;
+    }).join('');
+  }
+  const label = { pending:'waiting', kept: S.key === 'repair' ? 'in tree' : 'kept', skipped:'skipped', removed:'removed' };
+  return S.order.map((id, i) => {
+    const s = st.status[id];
+    const cls = 'row' + (s === 'pending' ? ' pending' : '') + (st.cur === id ? ' now' : '');
+    const pill = s === 'pending' ? '<span class="st">waiting</span>' : `<span class="st ${s}">${label[s]}</span>`;
+    return `<div class="${cls}"><span class="ix">${i + 1}</span><span class="nm">${id}<span>${E[id].w}</span></span><span class="bar"><i style="width:${E[id].w / 9 * 100}%"></i></span>${pill}</div>`;
+  }).join('');
+}
+
+function captionHTML(S, st) {
+  if (S.key !== 'cuts') return st.text;
+  let t = st.text;
+  if (st.S && !st.bad) {
+    if (ui.light) t += ` The lightest cable across this cut is <b>${cname(st.lightest)}</b>, so keep it.`;
+    if (ui.tree) t += ` ${st.lightest} ${TREE.has(st.lightest) ? 'is' : 'is not'} in the tree from the cheapest-first run (total weight ${KR.cost}).`;
+    const all = [...st.keptBefore, st.lightest];
+    if (ui.light && all.length === NCITY - 1) {
+      const same = all.length === TREE.size && all.every(id => TREE.has(id));
+      t += ` All ${NCITY} cities are connected now.` + (same ? ' These are the same cables as the cheapest-first tree.' : '');
+    }
+  }
+  return t;
+}
+
+function totalHTML(v) {
+  const sum = v.kept.length > 1 ? `${v.kept.map(id => E[id].w).join(' + ')} = ${v.cost}` : String(v.cost);
+  if (v.kept.length === NCITY - 1) {
+    return `<b>Spanning tree complete.</b> ${NCITY - 1} cables connect all ${NCITY} cities. Total weight = <span class="sum">${sum}</span>`;
+  }
+  return `Total weight so far = <span class="sum">${sum}</span>`;
+}
+
+/* ---------- render ---------- */
+function render() {
+  const S = SECTIONS[ui.sec], i = ui.idx[ui.sec], st = S.states[i], N = S.states.length;
+  ui.seen[ui.sec] = Math.max(ui.seen[ui.sec], i);
+  const v = viewOf(S, st);
+
+  document.querySelectorAll('.tab').forEach((b, k) => b.setAttribute('aria-selected', String(k === ui.sec)));
+  $('method').innerHTML = S.method;
+
+  if (S.key === 'cuts') {
+    $('stepno').textContent = i === 0 ? 'Start' : `Step ${i} of ${N - 1}`;
+    $('stepname').textContent = st.label;
+    $('chips').innerHTML = (st.S ? `<span class="chip">Across <b>${st.cross.length}</b></span>` : '') + `<span class="chip">Kept <b>${v.kept.length}</b></span><span class="chip">Total weight <b>${v.cost}</b></span>`;
+  } else {
+    $('stepno').textContent = i === 0 ? 'Start' : `Cable ${i} of ${N - 1}`;
+    $('stepname').textContent = st.cur ? cname(st.cur) : '';
+    $('chips').innerHTML = `<span class="chip">Kept <b>${st.kept.length}</b></span><span class="chip">Total weight <b>${st.cost}</b></span>`;
+  }
+
+  $('graph').innerHTML = graphSVG(S.key, st, { light: ui.light, tree: ui.tree });
+  $('legend').innerHTML = legendHTML(S, st);
+  $('total').className = 'total' + (v.kept.length === NCITY - 1 ? ' done' : '');
+  $('total').innerHTML = totalHTML(v);
+  $('caption').innerHTML = captionHTML(S, st);
+  $('ledgerTitle').textContent = S.key === 'cuts' ? 'Cables across this cut' : 'Cables in the order looked at';
+  $('ledger').innerHTML = ledgerHTML(S, st);
+
+  $('cutCard').hidden = S.key !== 'cuts';
+  $('togLight').setAttribute('aria-pressed', String(ui.light));
+  $('togTree').setAttribute('aria-pressed', String(ui.tree));
+
+  $('back').disabled = i === 0 && ui.sec === 0;
+  const atEnd = i === N - 1, lastSec = ui.sec === SECTIONS.length - 1;
+  $('next').textContent = atEnd && !lastSec ? `Next: ${SECTIONS[ui.sec + 1].label}` : 'Next';
+  $('next').disabled = atEnd && lastSec;
+  $('progress').innerHTML = S.states.map((_, k) => `<i class="${k <= i ? 'done' : ''}"></i>`).join('');
+
+  let strip = '';
+  for (let k = 0; k <= ui.seen[ui.sec]; k++) {
+    const s2 = S.states[k];
+    strip += `<button class="thumb${k === i ? ' on' : ''}" type="button" data-k="${k}" aria-label="Go to ${s2.short}">${graphSVG(S.key, s2, { mini: true, light: true, tree: false })}<span>${s2.short}</span></button>`;
+  }
+  $('strip').innerHTML = strip;
+  const on = $('strip').querySelector('.on');
+  if (on) $('strip').scrollLeft = on.offsetLeft - $('strip').clientWidth / 2 + on.offsetWidth / 2;
+}
+
+function go(d) {
+  const S = SECTIONS[ui.sec], N = S.states.length;
+  const j = ui.idx[ui.sec] + d;
+  if (j >= N) { if (ui.sec < SECTIONS.length - 1) { ui.sec++; ui.idx[ui.sec] = 0; } }
+  else if (j < 0) { if (ui.sec > 0) { ui.sec--; ui.idx[ui.sec] = SECTIONS[ui.sec].states.length - 1; } }
+  else ui.idx[ui.sec] = j;
+  render();
+}
+
+$('tabs').innerHTML = SECTIONS.map((S, k) => `<button class="tab" role="tab" type="button" data-s="${k}">${S.label}</button>`).join('');
+$('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) { ui.sec = +b.dataset.s; render(); } });
+$('strip').addEventListener('click', e => { const b = e.target.closest('.thumb'); if (b) { ui.idx[ui.sec] = +b.dataset.k; render(); } });
+$('next').addEventListener('click', () => go(1));
+$('back').addEventListener('click', () => go(-1));
+$('reset').addEventListener('click', () => { ui.idx[ui.sec] = 0; ui.seen[ui.sec] = 0; render(); });
+$('togLight').addEventListener('click', () => { ui.light = !ui.light; render(); });
+$('togTree').addEventListener('click', () => { ui.tree = !ui.tree; render(); });
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+});
+render();
+})();
+</script>
+
+</body>
+</html>

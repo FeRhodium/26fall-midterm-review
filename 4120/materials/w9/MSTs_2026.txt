@@ -1,0 +1,449 @@
+Greedy algs
+• Minimum Spanning Trees
+
+    CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                  1
+Objective
+• Greedy algorithms for spanning trees.
+  • Animations: https://visualgo.net/en/mst?slide=1
+• The Union-Find algorithm.
+• Optional: the 𝑚 log ∗ 𝑛 proof.
+  https://www.cs.cmu.edu/~15451-f16/lectures/lec05-
+  unionfind.pdf.
+• DPV Chapter 5 (we don’t cover the material in section 5.3).
+
+
+
+
+                         CSC4120 Design and Analysis of Algorithms   2
+                                    - C. Courcoubetis
+What is “greedy”?
+• Myopic behavior is easy and convenient, attractive for designing
+  algorithms.
+• Greedy algorithms: build up a solution piece by piece, always choosing
+  the next piece that offers the most obvious and immediate benefit.
+• This is not always sensible, but there are some computational tasks for
+  which it is optimal to be greedy.
+
+
+
+
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                        3
+                                                                                                         In this chapter, tree is an
+Minimum spanning trees                                                                                   undirected graph that is
+                                                                                                           connected and acyclic
+
+• (Spanning) tree of an undirected connected graph 𝐺 = (𝑉, 𝐸): a subgraph of
+  𝐺 that is connected and acyclic and covers all nodes of 𝐺.
+    • Many different spanning trees can be constructed from a given graph 𝐺.
+• Minimum spanning tree: a spanning tree with minimum total weight.
+                                                                                                    Property: Given a spanning tree
+is it equivalent with:                                                                              (black edges), add any new edge
+“minimum weight connected subgraph that covers all nodes“ ?                                         (red): creates a cycle.
+                                                                                                    Take out any black edge from the
+                                                                                                    cycle, keep the red: remains a tree.
+
+
+
+
+                                      CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                                4
+Properties
+• Property 1: Removing a cycle edge cannot disconnect a graph that was
+  connected.
+• Property 2: A tree on 𝑛 nodes has 𝑛 − 1 edges.
+   • Algorithm: start with all nodes disconnected, defining each a connected component.
+     Keep adding each edge (𝑢, 𝑣) making sure 𝑢 and 𝑣 are in separate connected
+     components, hence reducing the total number of connected components by one.
+• Property 3: Any connected undirected graph 𝐺 = (𝑉, 𝐸) with |𝐸| = |𝑉 | − 1 is
+  a tree.
+• Property 4: An undirected graph is a tree if and only if there is a unique path
+  between any pair of nodes.
+
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                           5
+We start with a connected graph. Consider any sequence of adding edges to the nodes until the graph is
+connected without loops (acyclic).
+Start with 𝑛 = 6 connected components (each node is a simplest connected component). Adding a new edge
+that does not create a loop reduces the # of connected components by 1 (since it connects two components
+to make a larger one). We stop when we have 1 connected component. Hence, we cannot have more than
+𝑛 − 1 = 5 edge additions. The resulting graph is a tree since it is connected and acyclic. It is connected
+because it was originally connected.
+
+            6 components                            5 components                                 4 components
+
+
+
+
+            3 components                           2 components                                  1 component
+                                   CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                6
+Adding an edge to a ST creates a cycle
+• Add the red edge to a spanning tree: creates a cycle.
+• Remove any edge from that cycle → get a spanning tree.
+• If I remove the heaviest edge: improve total weight of the tree.
+                                        𝟐
+
+
+                                        2
+                                    4
+                                                                   4
+                                                 3
+
+
+
+
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                         7
+`Cutting’ lemma 1                                                                         Substitute 𝑒 for 𝑒 ′ in T. This
+                                                                                            T’ must also be an MST
+                      cut
+                                              cycle of a MST that does
+                                                not contain the edge
+
+                                                                                                𝑒′
+
+
+
+
+            𝑒                                                                    𝑒
+
+
+Any lightest edge
+across the cut must
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+be in some MST T                                                                                                    8
+CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                              9
+                                                               can eventually become an MST
+
+ `Cutting’ lemma 2                                                 by adding more edges
+
+
+• Given 𝐺 = 𝑉, 𝐸 , a set 𝑋 ⊆ 𝐸 is “safe” if there is an MST 𝑇 ′ = 𝑉, 𝐸 ′ , s.t., 𝑋 ⊆ 𝐸 ′ .
+• A cut 𝐶 “respects” 𝑋 if 𝐶 ∩ 𝑋 = ∅.
+• Lemma: Suppose the set of edges 𝑋 are safe. Pick any cut 𝐶 that respects 𝑋 and let
+  𝑒 be a lightest edge across 𝐶. Then 𝑋 ∪ {𝑒} is safe (i.e., is part of some MST).
+
+                         𝑋
+
+
+
+
+                                                                               𝑒0            𝑒0′
+
+
+
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                   10
+                                                               can eventually become an MST
+
+ `Cutting’ lemma 2                                                 by adding more edges
+
+
+• Given 𝐺 = 𝑉, 𝐸 , a set 𝑋 ⊆ 𝐸 is “safe” if there is an MST 𝑇 ′ = 𝑉, 𝐸 ′ , s.t., 𝑋 ⊆ 𝐸 ′ .
+• A cut 𝐶 “respects” 𝑋 if 𝐶 ∩ 𝑋 = ∅.
+• Lemma: Suppose the set of edges 𝑋 are safe. Pick any cut 𝐶 that respects 𝑋 and let
+  𝑒 be a lightest edge across 𝐶. Then 𝑋 ∪ {𝑒} is safe (i.e., is part of some MST).
+
+                         𝑋
+                                          safe cuts
+
+
+
+
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                              11
+`Cutting’ lemma 2                                              can eventually become an MST
+                                                                   by adding more edges
+
+
+• Given 𝐺 = 𝑉, 𝐸 , a set 𝑋 ⊆ 𝐸 is “safe” if there is an MST 𝑇 ′ = 𝑉, 𝐸 ′ , s.t., 𝑋 ⊆ 𝐸 ′ .
+• A cut 𝐶 “respects” 𝑋 if 𝐶 ∩ 𝑋 = ∅.
+• Lemma: Suppose the set of edges 𝑋 are safe. Pick any cut 𝐶 that respects 𝑋 and let
+  𝑒 be a lightest edge across 𝐶. Then 𝑋 ∪ {𝑒} is safe (i.e., is part of some MST).
+
+                         𝑋                                                                       𝑋 ∪ {𝑒}
+                 4
+                                                                                             3
+                  3
+
+                  5
+
+
+                  3
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                           12
+𝑀𝑆𝑇 𝑇0 = 𝑉, 𝐸0 , 𝑋 ⊆ 𝐸0
+                                   suppose 𝑒 ≤ 𝑒′, ∀𝑒′ of the cut
+             cut
+              𝑒0′     𝑋                                                                                 𝑒0′   𝑇0
+
+                                                       𝑒                                                𝑒
+
+                                                                                                      𝑒 ≤ 𝑒0
+              𝑒0
+
+                                                                                                              𝑒0
+  𝑆                 𝑉−𝑆
+                                                                                    Add 𝑒 to the MST 𝑇0 , create a cycle that
+                          𝑒: lightest edge of cut                                   crosses the cut at 𝑒0 , take out 𝑒0 . The
+ 𝑋 ⊂ 𝐸′ is safe.                                                                    set 𝐸 ′ = 𝐸0 − 𝑒0 + 𝑒 is an MST, hence,
+                          Prove that 𝑋 + 𝑒 is safe.                                 𝑋 + 𝑒 is safe.
+
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                     13
+Example
+
+
+
+
+          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                        14
+Kruskal’s minimum spanning tree algorithm
+• Start with the empty graph, then select edges from 𝐸 according to the
+  following “greedy” rule:
+     Repeatedly add the next lightest edge that doesn’t produce a cycle.
+• Correctness: because of “cut property” (next slide).
+        order of edges according to weight
+
+
+
+
+                                  CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                15
+Why Kruskal is correct?
+• 𝑒: next lightest edge available in 𝐸 − 𝑋 that                                            𝑋
+  does not form a loop.
+• Consider the cut that isolates one of the
+  components that 𝑒 touches from the rest of
+  the components in 𝑋.                                                                         𝑒′
+
+• Any other edge 𝑒 ′ that crosses the cut is not                                           𝑒
+  added so far, hence must be 𝑒 ′ ≥ 𝑒.
+• By the cutting lemma, 𝑋 ∪ {𝑒} is safe.
+
+
+
+
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                    16
+Why Kruskal is correct?
+• 𝑒: next lightest edge available in 𝐸 − 𝑋 that                                            𝑋
+  does not form a loop.
+• Consider the cut that isolates one of the
+  components that 𝑒 touches from the rest of
+  the components in 𝑋.                                                                         𝑒′
+                                                                                                    cut
+• Any other edge 𝑒 ′ that crosses the cut is not                                           𝑒
+  added so far, hence must be 𝑒 ′ ≥ 𝑒.
+• By the cutting lemma, 𝑋 ∪ {𝑒} is safe.
+
+
+
+
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                      17
+Implementation of Kruskal’s algorithm
+• At each stage, the algorithm chooses an edge to add to its current partial solution.
+  To do so, it needs to test each candidate edge (𝑢, 𝑣) to see whether the endpoints
+  𝑢 and 𝑣 lie in different components.      otherwise, the edge produces a cycle.
+
+• Once an edge is chosen, the corresponding components need to be merged.
+• What kind of data structure supports such operations?
+• makeset(x), find(x), union(u, v).
+                              Given a connected
+                              undirected graph 𝐺
+                                with weights 𝑤
+
+
+
+
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                          18
+                                          Representing sets 𝐾 , {𝐸, 𝐵}, {𝐹, 𝐶, 𝐷, 𝐴, 𝐺, 𝐻}
+Union-find   Represent a set as a tree.
+             The root of the tree gives
+                                                            𝐾
+              the identity to the set.
+
+
+               Since find(x) takes time
+               proportional to depth of
+               the node, make trees of
+                    small depth!
+
+
+                                                                   In Kruskal we do first two finds to
+                To reduce depth: make
+                                                                   find 𝑟𝑥 , 𝑟𝑦 ; if 𝑟𝑥 ≠ 𝑟𝑦 then we do
+                 shorter tree point to
+                                                                   union(𝑟𝑥 , 𝑟𝑦 ) using the root nodes
+                  root of taller tree.
+                                                                   we already found, so we do each
+                                                                   find once.
+
+
+                                                                Rank is increased +1 only by
+                                                                merging two trees of equal rank
+              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                          19
+                                             Example of building {𝐹, 𝐶, 𝐷, 𝐴, 𝐺, 𝐻}
+Union-find                        rank = 0
+                                               𝐴            𝐶               𝐷               𝐹            𝐺            𝐻
+
+                                        rank = 1                    1                   2                    1
+                                                        𝐻               𝐷                   𝐻                    𝐹
+
+
+                                                                    0               0                1
+                                                    0                                                        0
+                                                        𝐶               𝐺               𝐶           𝐷            𝐴
+
+                                                   union(H,C) u(D,G)                                         u(F,A)
+                                                                                                0
+                                                                                                    𝐺
+                                                                                            u(C,G)
+                                                                                0                                2
+                                                                𝑘
+                                      rank 𝑘: at least 2
+                                      nodes in subtree.
+                                     Not related to depth.                                      0            1        1
+                                                                                1
+
+                                                                                                             0        0
+                                                                                            u(G,A)
+             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                                                  20
+The operations                          Minimum # of nodes for sets of rank 0, 1, 2, 3
+
+                                            0        1                         2                   3
+                                        𝐾                𝐷                         𝐻                   𝐻
+
+                                                                           0               1   0               1       2
+                                                     0           𝐺′                                                         Ε
+                                                         𝐺                     𝐶           𝐷       𝐶           𝐷
+
+                                                                                                                   0                1
+                                                                                       0                   0                        𝐾
+                                                                                           𝐺                   𝐺       𝐽
+                           min tree of rank 𝑘:
+                            merging of 2 min
+                          trees of rank 𝑘 − 1.                                                                                  0
+                                                                                                                                    𝐿
+                                                                        Any root node of rank 𝑘 has
+                                                                          ≥ 2𝑘 nodes in its tree.
+
+                          A root node with rank 𝑘 is created
+                          by the merger of two trees with
+                          roots of rank 𝑘 − 1.
+
+
+
+                 CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                           21
+The operations
+                                           Property 1: For any 𝑥, 𝑟𝑎𝑛𝑘 𝑥 < 𝑟𝑎𝑛𝑘 𝜋 𝑥 .
+                                           Property 2: Any root node of rank 𝑘 has at least
+                                           2𝑘 nodes in its tree.
+                 𝑂(log 𝑛)                  Property 3: If there are 𝑛 elements overall,
+                                                                  𝑛
+                                           there can be at most 𝑘 nodes of rank 𝑘.
+                                                                                    2
+                                           ⇒ maximum possible rank = log 𝑛
+                                                 = maximum depth of any tree.
+             𝑂(log 𝑛)
+
+                                                                                   - Only a single root node has the max
+                                                                                                              𝑛
+                              𝑂(1)                                                 rank, hence, solve for 𝑘: 𝑘 = 1.
+                                                                                                              2
+                                                                                   - Since rank strictly decreases from
+                                                                                   root to leaves, there cannot be more
+                                                                                   than max rank = log 𝑛 levels.
+
+
+                     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                  22
+ Implementation
+                                                                                    Since graph is connected:
+                                                                                       𝑛 − 1 ≤ 𝑚 ≤ 𝑛(𝑛 − 1)
+                                       Θ(𝑛)                                            ⇒ Θ log 𝑛 = Θ(log 𝑚)
+
+                                                               Θ 𝑚 log 𝑚
+                                                               = Θ(𝑚 log 𝑛)
+                                                                                                             𝑚 times
+
+
+                                                                 Θ(𝑚 log 𝑛) + Θ(𝑚 log 𝑛)
+
+Θ(log 𝑛)                                                         Complexity: 𝑂 𝐸 log 𝑉 + 𝐸 log 𝑉
+                                                                                               sorting                find+ union
+     In Kruskal we do first two finds to
+     find 𝑟𝑥 , 𝑟𝑦 ; if 𝑟𝑥 ≠ 𝑟𝑦 then we do
+     union(𝑟𝑥 , 𝑟𝑦 ) using the root nodes                                                                 can we do better if
+     we already found, so we do each                                                                       sorting is Θ(|𝐸|)?
+     find once.
+                                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                                    23
+ Implementation
+                                                                                    Since graph is connected:
+                                                                                       𝑛 − 1 ≤ 𝑚 ≤ 𝑛(𝑛 − 1)
+                                       Θ(𝑛)                                            ⇒ Θ log 𝑛 = Θ(log 𝑚)
+
+                                                               Θ 𝑚 log 𝑚
+                                                               = Θ(𝑚 log 𝑛)
+                                                                                                             𝑚 times
+                                                                                                                    with path compression
+                                                                 Θ(𝑚 log 𝑛) + Θ(𝑚 log 𝑛)                                  log ∗ 𝑉
+Θ(log 𝑛)                                                         Complexity: 𝑂 𝐸 log 𝑉 + 𝐸 log 𝑉
+                                                                                               sorting                find+ union
+     In Kruskal we do first two finds to
+     find 𝑟𝑥 , 𝑟𝑦 ; if 𝑟𝑥 ≠ 𝑟𝑦 then we do
+     union(𝑟𝑥 , 𝑟𝑦 ) using the root nodes                                                                 can we do better if
+     we already found, so we do each                                                                       sorting is Θ(|𝐸|)?
+     find once.
+                                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                                    24
+                                                                                                            union:
+Path compression                                                                                            2×𝑓𝑖𝑛𝑑 + 𝑂(1)
+
+• Change all pointers during each find() so that they point directly to the root.
+
+
+
+
+                                          ∗                                               log ∗ 1000 = 4:
+  Amortized cost of union-find: 𝑂 log 𝑛 ≈ 𝑂 1 ,                                           log log log log 1000 = 1
+  total time for 2𝑚 finds: 𝑂 𝑚 log ∗ 𝑛 .                                                  log ∗ 𝑛 > 5 if 𝑛 ≥ 2265536 .
+
+
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                         25
+Prim’s algorithm
+• Prim’s algorithm: the intermediate set of edges 𝑋 always forms a subtree,
+  and 𝑆 is chosen to be the set of this tree’s vertices.
+• Strongly reminiscent of Dijkstra’s algorithm:
+   • in Prim’s, the value of a node is the weight of the lightest incoming edge from set 𝑆.
+   • in Dijkstra’s it is the length of an entire path to that node from the starting point.
+
+
+                                                                                            𝑣. 𝑑 = smallest distance
+                                                             𝑣. 𝑑                           to any node in 𝑆.
+                                                                                            𝑣. 𝜋 = node in 𝑆 that
+                                                              𝑣. 𝜋
+                                                                                            achieves this smallest
+          apply the                                                                         distance.
+        cutting lemma
+
+
+                              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                               26
+Example
+
+
+
+
+          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                        27
+

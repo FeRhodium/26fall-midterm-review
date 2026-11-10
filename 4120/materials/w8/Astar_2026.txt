@@ -1,0 +1,260 @@
+• A*
+
+
+       CSC4120 Design and Analysis of Algorithms
+                                                   1
+Objective
+• Understand A*
+• https://www.youtube.com/watch?v=cSxnOm5aceA
+• https://brilliant.org/wiki/a-star-search/
+• more details:
+  http://theory.stanford.edu/~amitp/GameProgramming/Implement
+  ationNotes.html
+• Do your own experiment in class:
+  https://qiao.github.io/PathFinding.js/visual/
+
+
+                       SUTD ISTD 50.004 Intro to Algorithms
+Dijkstra’s algorithm (reminder)
+
+
+
+
+                     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+   Goal-directed search (A* algorithm)
+   • Our searches are on the plane, Euclidean (or Manhattan) distance.
+   • Dijkstra: explore nodes in a “circular” way around s.
+   • Suppose we have some information about the location of the destination, can
+     we add it to the search to find faster the shortest path?
+                            Dijkstra               Desired
+                                                                                              Can we find the shortest
+                                                                                              path to � by exploring
+dark green: s
+red: t                             s                                                          fewer nodes?
+light green: in set Q,                                                                        Change the priority of
+i.e., partially explored,
+blue: already explored.
+                                       t                                                      exploring new nodes?
+                                                                                                                         how do I know I found
+                                                                                                                           a shortest path?
+
+   • Dijkstra: explore nodes with priority � � = lowest “past” cost, i.e., cost to get
+     to �. How to change?
+                                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+Goal-directed search (A* algorithm)
+             Dijkstra                                          Desired                      Why bother if we
+                                                                                            know the destination
+                                                                                            in grid type graphs?
+                     s
+                              t
+
+
+
+                                                                               Note for arbitrary graphs: If we
+• When considering node v from Q:                                              could guess correctly � �, � , and
+                                                                               set ℎ � = � �, � , then A* would
+• Dijkstra: priority = � � : cost to reach � = past cost.                      move along the shortest path.
+                                                                               Because � � = � � + ℎ � =
+• �∗ : priority is � � = � � + ℎ � .                                           shortest path from s to v + shortest
+                                                                               path from v to t, ⇒ is minimized if
+     ℎ � : heuristic to estimate                                               � on shortest path from s to t.
+     of future cost from � to �.   CSC4120 Design and Analysis of Algorithms
+                                              - C. Courcoubetis
+Dijkstra’s algorithm (reminder)
+
+
+
+
+                     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+               Bring into closed set according
+A*             to � . , relax edges according
+                   to � . , i.e., update �.
+
+
+                                                                                                  what can
+                                                                                                 go wrong?
+
+
+
+
+(a)
+
+(b)
+
+(c)
+                         � neighbor
+                                                                     (a)
+                                                            (b)
+                                                                     (c)
+
+
+
+
+                                                                       when we bring a node v to the
+      CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                    closed set, � � may not be � �, � .
+Exercise
+• Run A* on the following graph and check that it will terminate with the
+  wrong shortest path to �.
+
+
+
+
+• Why? because ℎ not “admissible”: must have ℎ � ≤ � �, � .
+• Other issues? nodes may go in and out of �: no guarantee of termination
+  time. Need ℎ to be “consistent”. Consistency implies admissibility.
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+           �: distance cost, ℎ: future cost estimate
+A*                                      To get any guarantees on A* we need to restrict ℎ . .
+                                        Admissible ℎ . : A* always terminates successfully by
+                                        finding the shortest path.
+                                        • Iff ℎ � ≤ � �, ���� .          ℎ � never overestimates the
+                                                                                                actual cost to get to the goal.
+
+
+
+
+                   (a)
+     (b)
+                 (c)
+
+
+
+
+                                  CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+A*                            To get any guarantees on A* we need to restrict ℎ . .
+                              Admissible ℎ . : A* always terminates successfully by
+                              finding the shortest path.
+                              • Iff ℎ � ≤ � �, ���� .
+
+                              Consistent ℎ . : A* always terminates successfully and
+                              never moves nodes from the closed back to the open set.
+                              • Iff �′ �, � = � �, � + ℎ � − ℎ � ≥ 0, ∀ �, � .
+                                                                                           using the potential
+                                           ′
+                                      - � �, � is like an “amortized” cost of action � →        method
+             (a)                      �. We require it to be always ≥ 0.
+     (b)
+                                      - We consider both the increase � of the current
+           (c)
+                                      cost and the Δ on future costs through the change
+                                      Δℎ of the potential function ℎ . .
+
+
+
+                   CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+Pathmax
+
+
+
+
+                                                      The resulting f is also always “consistent”
+
+
+
+
+          CSC4120 Design and Analysis of Algorithms
+                                                                                        11
+Admissible heuristic for destination �
+• Admissible ℎ . : ℎ � ≤ � �, � .
+
+                                                     �                                  last step of completing the longer path:
+ longer path                                                                �          bring into � the node � before bring � into
+     �                                                                                  �. This can’t happen since � � > � � .
+
+
+     �            = � �, �
+                                                                                             �
+                                                                                                 � � = �, ℎ � = 0
+                                                                 � �, �
+                � �, �                                                                           � � = � � +ℎ � =0
+                                     �                       �
+                                                                                                     =�
+shortest path                                                      � � = � �, � , ℎ � ≤ � �, �
+   ����
+                                                                                     = � �, �
+                  stopped here                                 � � = � � + ℎ � ≤ � �, �
+                                                                   ≤ ����
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                         12
+Next
+• Perform and explain A* simulations using
+  https://qiao.github.io/PathFinding.js/visual/
+
+
+
+
+                              CSC4120 Design and Analysis of Algorithms
+                                                                          13
+                                                  Note that in this
+                                                  example ℎ � = � �, � = actual
+                                                  shortest path distance.
+
+                                                  Dijkstra explores nodes
+                                                  according to min � �, �
+
+
+
+ℎ �
+
+      A*                                          A* explores nodes according to min
+                                                  � �, � + ℎ � = � �, � + � �, �
+                                                  In general: ℎ � = � �, � for some
+                                                  estimate � �, � of � �, � where
+                                                  � �, � ≤ � �, � .
+                                                  Note that if � �, � = � �, � , A*
+                                                  explores the nodes along the
+                                                  shortest path.
+
+           SUTD ISTD 50.004 Intro to Algorithms
+Examples
+      A*                                Dijkstra
+
+
+
+
+                                This link is running the code: try it yourself
+                How do you expect the A* to work
+                on this example?
+
+           SUTD ISTD 50.004 Intro to Algorithms
+Examples
+       A*                                Dijkstra
+
+
+
+
+            SUTD ISTD 50.004 Intro to Algorithms
+Comparing Dijkstra with A* video
+
+
+
+                      SUTD ISTD 50.004 Intro to Algorithms
+Practical ways to define ℎ .
+• Euclidean distance for euclidean graphs. (Manhattan distance for grids)
+• Use landmarks for general graphs.
+     For each specific landmark node �, �, … pre-compute SP distances to
+     and from all nodes of the graph.
+• ...
+• Use solutions of relaxed problems, that are easy to solve.
+
+
+
+
+                              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                            18
+CSC4120 Design and Analysis of Algorithms
+                                            19
+CSC4120 Design and Analysis of Algorithms
+                                            20
+CSC4120 Design and Analysis of Algorithms
+                                            21
+                                            The closer h is to the true cost to go,
+                                                  the better it is for search
+
+
+
+
+CSC4120 Design and Analysis of Algorithms
+                                                                             22
+

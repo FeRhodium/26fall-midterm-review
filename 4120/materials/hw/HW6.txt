@@ -1,0 +1,40 @@
+CSC4120 Design and Analysis of Algorithms, Fall 2026
+CUHK-SZ                                                                      Due: Nov 11, 23:59
+Costas Courcoubetis                                                          Homework - Week 7
+
+
+Problem 1. Cycle Detection with BFS
+A cycle is a path of edges from a node to itself. You are given a directed graph G = (V, E), and a
+special vertex v. Give an algorithm based on BFS that determines in O(V + E) time whether v is
+part of a cycle.
+
+Problem 2. Reachability
+We are given a directed graph G = (V, E). We like to find out in time O(|V | + |E|) if there is a
+vertex v ∈ V that has the property that starting from v we can reach all the other vertices in V .
+
+Problem 3.
+Problem 3.7 of DPV Ch. 3.
+
+
+
+
+Problem 4.
+Problem 3.16 of DPV Ch. 3.
+Assume that you are also given the ‘reverse’ edges: for each course v, the courses w that are its
+prerequisites.
+2
+
+
+Problem 5.
+Problem 3.26 of DPV Ch. 3. Do questions (a) and (c) only.
+
+
+
+
+There still remains a problem on the next page.
+                             3
+
+
+Problem 6.
+Problem 3.28 of DPV Ch. 3.
+

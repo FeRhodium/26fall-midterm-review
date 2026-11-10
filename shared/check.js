@@ -5,7 +5,7 @@ const vm = require("vm");
 const path = require("path");
 
 let katex;
-for (const p of ["/tmp/katexcheck/node_modules/katex", "katex"]) {
+for (const p of [path.join(__dirname, "katex/katex.min.js"), "/tmp/katexcheck/node_modules/katex", "katex"]) {
   try { katex = require(p); break; } catch (e) { /* try next */ }
 }
 if (!katex) { console.error("katex not found: cd /tmp/katexcheck && npm install katex@0.16.11"); process.exit(2); }

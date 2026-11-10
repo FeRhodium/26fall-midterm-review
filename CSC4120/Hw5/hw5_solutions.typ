@@ -9,7 +9,7 @@
   [Valid. Deterministic and maps into $\{0, dots, N-1\}$ (all keys collide, but it is a legal hash function).],
   [Invalid. Not deterministic: the same key may map to a different slot at search time.],
   [Valid. This is the division method.],
-  [Invalid. Range is $\{0, dots, N-3\}$: slots $N-2$ and $N-1$ are never used.],
+  [Valid, but a poor choice. Deterministic, computable in $O(1)$, and every value is a legal slot; it merely never uses slots $N-2$ and $N-1$ (wastes 2 slots — the same defect as (a), which uses only slot 0, only milder).],
   [Valid as a function (deterministic, range $\{0, dots, N-1\}$), but unusable: every operation costs $Theta(N^2)$ just to evaluate $h$.],
 )
 
@@ -27,7 +27,7 @@ which depends only on the sum of the characters, not their positions. Hence perm
   [False. Open addressing: $1/(1-alpha)$ probes; chaining: $1 + alpha$ probes. Since $1/(1-alpha) > 1 + alpha$ for all $0 < alpha < 1$, chaining is faster.],
   [False. Insertion costs $1/(1-alpha)$ probes vs. $1 + alpha$ in chaining; deletion in open addressing needs tombstones or shifting, so it is not faster either.],
   [True. No pointers per slot/element; for the same storage a larger table (lower load factor) is possible.],
-  [False. Open addressing: the initial probe finds an occupied slot with probability exactly $alpha$. Chaining: a new key lands in a non-empty bucket with probability $1 - (1 - 1/m)^n approx 1 - e^(-alpha) = alpha - alpha^2/2 + dots.c < alpha$ (and under the literal definition "no empty slot found", chaining never has one at all). Not equal.],
+  [False. Open addressing: the initial probe finds an occupied slot with probability exactly $alpha$. Chaining: a new key lands in a non-empty bucket with probability $1 - (1 - 1/m)^n approx 1 - e^(-alpha) = alpha - alpha^2/2 + dots.c < alpha$. Not equal.],
 )
 
 *4.*  Expected empty slots: $ m (1 - 1/m)^n approx m e^(-n/m). $
@@ -93,8 +93,18 @@ $ 1/(1 - alpha) = 1/(1/sqrt(n)) = sqrt(n) = Theta(sqrt(n)). $
 
 (b) All leaves of a 2-3 tree are at depth $<= log_2 n$, so any insertion or deletion costs at most $c_1 log n$ actual work.
 
-*Charging scheme.* Charge each insertion $C log n$ ($C = 2 c_1$), and deposit the surplus as *one credit on every node the insertion touches* ($<= 2 log n + O(1)$ nodes, $O(1)$ work per node). After every insertion every touched node carries a credit; nodes are only created/restructured by insertions, so *every node always carries at least one credit*.
+*Charging scheme (common bank).* Insertions are charged extra and deposit the surplus into a single common bank; deletions pay their entire actual cost out of this bank, so they are charged 0. Track the bank balance as $Phi = K n log n$, where $n$ is the current number of keys and $K = 2 c_1$.
 
-*Deletions cost 0.* A deletion touches $<= 2 log n$ nodes ($O(1)$ work each); each touched node's own credit pays for that work, so the whole actual cost is paid from banked credits and the deletion is charged 0.
+*Insertion.* When the tree has $n$ keys, the actual cost is $<= c_1 log n$, and the bank must grow by
 
-*Balance.* Each insertion deposits $>= c_1 log n$ credits; each deletion withdraws at most $c_1 log n$ (its touched nodes' credits), and each node's credit is spent at most once before being re-armed by a later insertion that pays for it. With $C$ large enough the credit balance never goes negative, so amortized $O(log n)$ for insertion and $0$ for deletion are valid. $square$
+$ Delta Phi = K[(n+1) log(n+1) - n log n] <= K (log n + 2). $
+
+Charge the insertion an amortized $(c_1 + K)(log n + 2) = O(log n)$: it pays its own cost and deposits the surplus.
+
+*Deletion.* Before the deletion the tree has $n$ keys; the actual cost is $<= c_1 log n$, and the bank releases
+
+$ Delta Phi = K[n log n - (n-1) log(n-1)] >= K log(n-1) >= K(log n - 1). $
+
+The release $K(log n - 1) = 2 c_1 log n - K >= c_1 log n$ for $log n >= 2$ (and the remaining cases are constants covered by the constant terms) covers the actual cost, so the deletion is charged $0$.
+
+*Balance.* $Phi = K n log n >= 0$ always, so the bank never goes negative; the amortized costs — $O(log n)$ per insertion, $0$ per deletion — are valid. $square$

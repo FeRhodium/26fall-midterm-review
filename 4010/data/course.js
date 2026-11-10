@@ -2,7 +2,10 @@ Review.setup({
   key: "csc4010-v1",
   code: "CSC4010",
   name: "理论计算机科学导论",
-  other: { href: "../3150/", label: "CSC3150" },
+  other: [
+    { href: "../4120/", label: "CSC4120" },
+    { href: "../3150/", label: "CSC3150" }
+  ],
   exam: {
     start: "2026-11-02T08:30:00+08:00",
     when: "11 月 2 日（周一）08:30–09:30",

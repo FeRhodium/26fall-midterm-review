@@ -1,0 +1,10 @@
+Questions on BFS and DFS
+Give a counterexample to the conjecture that if there is a path from u to v in a
+directed graph G, and if d[u] < d[v] in a depth-first search of G, then v is a
+descendant of u in the depth-first forest produced.
+
+Give a counterexample to the conjecture that if there is a path from u to v in a
+directed graph G, then any depth-first search must result in d[v] < f[u].
+
+Solution:
+

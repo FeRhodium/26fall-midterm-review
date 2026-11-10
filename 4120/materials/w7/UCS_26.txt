@@ -1,0 +1,110 @@
+• Uniform Cost Search:
+  A goal-oriented BFS
+
+       CSC4120 Design and Analysis of Algorithms
+                                                   1
+Objective
+• Extend BFS to find shortest paths from origin 𝑠 to a given destination 𝒅 for arbitrary link
+  weights. In classical BFS edges have unit distance (“hops” count).
+• New interpretation: build a set of paths starting from 𝑠 instead of a set of nodes.
+• At the end of step 𝑘 − 1: 𝑃𝑘−1 = current “potentially interesting” set of paths (if 𝑑 is
+  reachable, then one of these path is the prefix of the shortest path we are searching for).
+• In step 𝑘 we add more paths by expanding the most promising among the current paths:
+                                  ∗
+  we choose the shortest path 𝜋𝑘−1    from 𝑃𝑘−1 , remove it out from the current set, and add
+  the new paths that result by adding the neighbours of its leaf (final node). If we reach 𝑑,
+  we record the path length 𝑤 ∗ . We found a feasible path, but perhaps we can do better!
+• We keep expanding 𝑃ℓ , ℓ > 𝑘 by always expanding its shortest path while improving our
+  shortest path length 𝑤 ∗ when possible. We terminate if all candidate paths are ≥ 𝑤 ∗ .
+• Classic BFS: Think of the queue as containing the leaves of the potentially interesting paths.
+  Key difference: the first time we reach 𝑑 in classic DFS we can stop (no way to beat that)
+                                    CSC4120 Design and Analysis of Algorithms
+Example
+• We want to find least cost path from start state 𝑆 to goal state 𝐺
+• Costs are given on the edges
+• Cannot find best path by inspection for graphs with 100 nodes…
+• We will use Uniform Cost Search (UCS)
+
+
+
+
+                              CSC4120 Design and Analysis of Algorithms
+                                                                          3
+Terminology
+• 𝐻: list of currently explored paths with their total cost
+• 𝐸: set of nodes that have already be expanded (i.e., we have considered
+  the paths through them to their neighbours) and hence do not have to
+  be considered any more
+
+
+
+
+                             CSC4120 Design and Analysis of Algorithms
+                                                                            4
+                                           we won’t consider this path
+                                        anymore since we will expand this
+                                              further. p is this path
+
+             path: sequence of nodes
+leaf: last
+  node                                                        these are the neighbors of the leaf
+
+                                                                                   don’t need anymore
+
+                                                                               what ever is expanded
+                                                                                is of no future use
+
+
+
+                                                        Note that we already found a path that reaches G and
+                                                         hence 𝑤 ∗ = 12. But we keep going in to find better
+                                                       ones and reduce 𝑤 ∗ . How do we know that we should
+                                                       not look any further? Either if there are no more paths
+                                                      to expand, or the paths in 𝐻 are all ≥ 𝑤 ∗ (same as if the
+                                                              current shortest path in 𝐻 is ending in G)
+                                       CSC4120 Design and Analysis of Algorithms
+                                                                                                                   5
+CSC4120 Design and Analysis of Algorithms
+                                            6
+CSC4120 Design and Analysis of Algorithms
+                                            7
+CSC4120 Design and Analysis of Algorithms
+                                            8
+CSC4120 Design and Analysis of Algorithms
+                                            9
+                         If we would take SACG off:
+                            cannot expand further
+
+         x
+
+              x
+
+
+
+CSC4120 Design and Analysis of Algorithms
+                                                      10
+CSC4120 Design and Analysis of Algorithms
+                                            11
+                                                   𝑙
+                                                1+ 𝑒
+                           • Complexity: 𝑂(𝑚          ) where:
+                             𝑚 is the maximum number of neighbors a node has
+                           • 𝑙 is the length of the shortest path to the goal state
+                           • 𝑒 is the least cost of an edge
+
+
+
+
+CSC4120 Design and Analysis of Algorithms
+                                                                             12
+CSC4120 Design and Analysis of Algorithms
+                                            13
+References
+• https://inst.eecs.berkeley.edu/~cs188/sp20/assets/lecture/lec-3.pdf
+
+
+
+
+                             CSC4120 Design and Analysis of Algorithms
+                                                                         14
+

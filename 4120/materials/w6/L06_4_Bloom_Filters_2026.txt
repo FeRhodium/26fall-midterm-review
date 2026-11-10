@@ -1,0 +1,311 @@
+• Bloom filters
+
+
+
+      CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                    1
+Objective                                                                no need to store
+                                                                         actual elements
+
+
+ • Given a set of elements 𝑆, we want a data structure for supporting
+   insertions and querying about membership in 𝑆.
+    • Minimize the use of memory: use a single bit per element.
+    • Can check membership as fast as possible.
+    • Probabilistic test.
+ • Burton Bloom: The Bloom filter data structure. Comm. ACM, July 1970.
+ • http://www.eecs.harvard.edu/~michaelm/NEWWORK/postscripts/Bloo
+   mFilterSurvey.pdf
+
+
+
+
+                             CSC4120 Design and Analysis of Algorithms              2
+                                        - C. Courcoubetis
+Example
+• We have a set 𝑆 of 109 e-mail addresses, where the typical e-mail
+  address is 20 bytes.
+   • Requires 20 Gbytes of memory. Too expensive to store in main
+     memory.
+• We can afford 1 Gbyte of memory, which is approximately 109 bytes or
+  8 × 109 bits.
+• How can we put 𝑆 in main memory to query it?
+
+
+
+
+                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                       3
+The bloom filter
+• A Bloom filter is an array 𝑇 of 𝑚 bits representing a set 𝑆 = 𝑥1 , … , 𝑥𝑛 of 𝑛
+  elements.
+    • 𝑇 set to 0 initially.
+                                                                            SUHA
+• 𝑘 independent hash functions ℎ1 , … , ℎ𝑘 with range {1, 2, … , 𝑚}.
+    • Assume that each hash function maps each element in the universe to a
+      random number uniformly over the range 1, 2, … , 𝑚 .
+• For each element 𝑥 in 𝑆, the bit ℎ𝑖 (𝑥) in the array is set to 1, for 1 ≤ 𝑖 ≤ 𝑘.
+    • A bit in the array may be set to 1 multiple times for different elements.
+
+
+
+
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                         4
+A bloom filter example, 3 hash functions
+
+
+
+
+                                                                        false positive
+                CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                         5
+ Standard Bloom filter
+• To check membership of 𝑦 in 𝑆, check whether ℎ𝑖 𝑦 = 1, ∀𝑖 = 1, … , 𝑘.
+   • If not, 𝑦 is definitely not in 𝑆 (no false-negative).
+   • If yes, we conclude that 𝑦 ∈ 𝑆, but sometimes this conclusion is wrong (we
+     allow for false-positive).                                    since the corresponding bits were
+                                                                  set to 1 because of other elements
+
+• For many applications, false positives are acceptable as long as the probability
+  of a false positive is small enough.
+• Note that no deletions are allowed (otherwise we may get false-negatives).
+• We will assume that 𝑘𝑛 < 𝑚.                      because we might set to 0 a bit that
+                                                   was set to 1 by some other element
+
+
+              otherwise, the array will have mostly 1s
+               and search(x) will always return true
+
+
+
+
+                                                  CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                6
+Probabilities (false positives)
+• After all 𝑛 members of 𝑆 have been hashed to a Bloom filter, the probability
+  that a specific bit is still 0 is
+                                                                                               Prob. a specific bit = 0 using a
+                                                   1 𝑘𝑛                  −
+                                                                           𝑘𝑛                                      1 𝑛        −
+                                                                                                                                  𝑛
+
+                           𝑝 = 1−                               ≈𝑒         𝑚    .               single h is 1 −
+                                                                                                                   𝑚
+                                                                                                                         ≈𝑒       𝑚
+
+                                                  𝑚
+• For a non-member, it may be found to be a member of 𝑆 (all its 𝑘 bits are
+  nonzero) with false-positive probability
+                                                                              𝑘𝑛
+                                                                          −
+                        𝑓 = 1 − 𝑝 𝑘 = (1 − 𝑒                                  𝑚     )𝑘 .      Two competing forces 𝑘, 𝑘 as k ↑
+
+
+
+
+                                                                                                          𝑚
+                                   Simple algebra: min 𝑓 𝑘 → 𝑘𝑜𝑝𝑡 =                                              ln 2.
+                                                                          𝑘                               𝑛
+                                                                            𝑚                            𝑚
+                                                                              ln 2
+                                               𝑓𝑜𝑝𝑡 = 0.5                   𝑛              ≈ 0.6185      𝑛   .
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                         7
+Counting Bloom filters                                                                       To check membership of 𝑦 in 𝑆,
+                                                                                             check whether ℎ𝑖 𝑦 > 0, ∀𝑖 =
+                                                                                             1, … , 𝑘
+• Initially proposed for distributed caching.
+• Every entry in a counting Bloom filter is a small counter (rather than a
+  single bit).
+    • When an item is inserted into the set, the corresponding counters are
+      each incremented by 1.
+    • When an item is deleted from the set, the corresponding counters are
+      each decremented by 1.
+• To avoid counter overflow, its size must be sufficiently large. It was found
+  in practice that 4 bits per counter are enough.
+                                                                                         When a counter does overflow, it
+                                                                                         may be left at its maximum value.
+                                                                                           Problem for false negatives!
+
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                       8
+Some Bloom filter applications
+• Use the fact that Bloom filters allow for easy characterization of sets
+  (decide set membership).
+• To disclose my set of resources I can send my bloom filter! (the bit array +
+  hash functions).
+• Objects: resources, files, network addresses.
+• Can also store counting information.
+• Many interesting application areas in which: low cost of false positives,
+  high cost for false negatives.
+
+
+
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                         9
+Distributed caching (of web pages)                                                      this is how the
+                                                                                         Cloud works!
+
+• On a cache miss a proxy server needs to determine if another proxy
+  cache holds the desired Web page (instead of trying to obtain the page
+  from the Internet).
+• Proxies must know the content of other proxy caches.
+• They send periodically Bloom filters that represent the content of their
+  cache, instead of URL lists.
+• Each cache maintains a counting Bloom filter (because of dynamic
+  content), broadcasts periodically a simple Bloom filter to other proxies.
+• Possible false positives and false negatives (why?).
+
+
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                          10
+CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                              11
+P2P: finding location of files
+• Problem: who has which pieces of a large file.
+• Use a bloom filter to characterize the objects available in location a
+  (instead of the list of full ids of the objects).
+    • False positives: creates extra requests and need to have alternative
+      method to locate the item elsewhere if not available.
+• Set reconciliation: find and send 𝑆𝑎 − 𝑆𝑏 .
+    • False negatives: not all members of the 𝑆𝑎 − 𝑆𝑏 are sent.
+• Could be used in large file distribution systems.
+                                                                                          I am b and ask a to send me the
+                                                                                        pieces of the file I don’t have. I send
+                                                                                         her 𝑆𝑏 . She computes 𝑆𝑎 − 𝑆𝑏 and
+                                                                                          sends me the pieces in that set.
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                       12
+Network routing
+• Geographic routing:
+   • Region is divided in areas with one responsible node
+   • Each node has a bloom filter for reachability from itself and
+     siblings
+• False positive: extra path traversal
+
+                                                    B                              C
+
+
+                              A
+                                                                                       A
+                                                                                           C
+                                                                                               B
+                          B
+                              C                                            D
+                                  D
+
+                                  CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                   13
+Packet routing
+                                                                                                        Router D that receives the
+• Source routing                                                                                            packet checks which
+   • A packet stores its route (A,D,G,…) as a Bloom filter; each                                        among its neighbors are in
+     router uses this filter to find the next router in the path                                         the route of the packet,
+                                                                                                         i.e., in its Bloom filter. In
+• Detecting loops (unicast, multicast)                                                                  this case it finds that G is
+   • Use a bloom filter in the packet to mark nodes traversed                                                    in the route.
+
+           contains Bloom filter for the set {A,D,G,H}
+                                                               B                        E
+                      header      data
+
+                                             A                       D                      F
+                                                                                                K
+                                                                   route of packet
+                                                               C                       G            J
+
+
+                                                                                                H
+
+                                  CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                               14
+Recording heavy flows
+• Use a counting Bloom filter, each location 𝑖 stores byte volume 𝑣𝑖.
+   • When a packet p arrives, hash according to flow id f, add to all locations 𝑖 ∈ ℎ(𝑓)
+     the volume of data x of the packet: ∀𝑖 ∈ ℎ 𝑓 , 𝑦𝑖 = 𝑦𝑖 + 𝑥.
+   • Estimate of the total volume carried by a flow = min {𝑦𝑖 }.
+                                                                             𝑖∈ℎ(𝑓)
+
+• Conservative update.
+   • Do not increase a location if it exceeds the value of the location with the
+     minimum volume.
+                                         yi
+
+
+
+
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                             15
+Fair queue management with a counting Bloom filter
+
+
+
+                                                                                         We don’t want to discard a
+                                                                                          packet at random. Why?
+
+• Setting: many flows share one router queue.
+• Problem: when the queue is full and a packet arrives, whose packets do we discard?
+• Goal: penalize flows that “contribute most to congestion”: those that keep many packets in
+  the queue for a long time.
+• Constraint: millions of flows, little memory: no per-flow state.
+• Technique: mark packets with a probability that grows while their flow keeps the queue
+  highly loaded; discard marked packets with priority.
+• Tool: a counting Bloom filter. CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                          16
+A router queue shared by many flows
+• A flow 𝑓 = (source, destination). Each box shows the flow of one queued packet.
+
+
+
+
+• When the queue is full, a marked packet is discarded to make room.
+• Goal: mark packets of heavier flows with higher probability .
+• Obstacle: millions of flows: we cannot keep one counter per flow.
+• Idea: hash each flow into a small array of 𝑚 counters (a counting Bloom filter).
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                          17
+Use a counting Bloom filter
+
+
+
+
+                CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                              18
+How to update 𝑝(𝑖)
+
+
+
+
+               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                             19
+How to mark a packet
+
+
+
+
+               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                             20
+Understand a single bin
+
+
+
+
+                CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                              21
+What we learned
+• A Bloom filter can hold a policy, not just a set. Counters and marking probabilities
+  in 𝑚 bins enforce fairness among millions of flows, with no per-flow state. The cost
+  per packet is 𝑘 hash operations and 𝑘 counter accesses, and the answers are
+  approximate.
+• The structure is a feedback loop. Marking slows down a heavy flow (if it reacts to
+  losses, as TCP does), its bins drain, and 𝑝(𝑖) comes back down. A flow that ignores
+  marking keeps pushing 𝑝(𝑖) up to the cap of 1. The scheme adapts to how senders
+  behave, without knowing their rates.
+• Errors are cheap here. A collision can only make an innocent flow look guilty if all
+  of its 𝑘 bins are congested at once, which is rare. Even then the cost is an
+  occasional extra discard, not a wrong answer. That is why an approximate structure
+  with collisions is good enough, as in many Bloom filter applications.
+
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                          22
+

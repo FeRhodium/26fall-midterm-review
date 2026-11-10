@@ -1,6 +1,6 @@
 # 期中复习
 
-CSC4010 和 CSC3150 的复习站，放在同一个端口上。
+CSC4120、CSC4010 和 CSC3150 的复习站，放在同一个端口上。
 
 在线版（GitHub Pages）：https://ferhodium.github.io/26fall-midterm-review/
 
@@ -9,6 +9,7 @@ python3 serve.py            # 默认 8765 端口
 ```
 
 - http://127.0.0.1:8765/ 入口
+- http://127.0.0.1:8765/4120/ 算法设计与分析（Midterm 2）：Week 6–9 讲义（摊还分析、概率哈希与布隆过滤器、BFS/DFS/拓扑排序/SCC/UCS、Bellman-Ford/Dijkstra/双向搜索/A*/地标势函数、Huffman/集合覆盖/MST/并查集）、HW5–7 精讲、2021 样卷与全真模拟卷、5 个交互单步可视化器
 - http://127.0.0.1:8765/4010/ 理论计算机科学导论：Lecture 1–12 讲义、Problem Set 1–5 精讲、Practice Midterm 样卷、图灵机单步模拟器
 - http://127.0.0.1:8765/3150/ 操作系统：Lecture 1–13 讲义、Lecture 14 预习、Spring 2026 Final 样卷全解
 

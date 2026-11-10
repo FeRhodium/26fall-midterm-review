@@ -1,0 +1,92 @@
+• Breath-first search
+
+
+     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   1
+Objective
+ • Two BFS algorithms: queue, frontier implementation.
+   implementation.
+ • The shortest path tree.
+ • Read DPV Chapter 4.1-4.2.
+ • More on trees.
+
+
+
+
+                                                                                      2
+                        CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+Connecting nodes with strings of length 1
+• “Lift” the graph by holding starting state 𝑎
+                                                                                          distance 0
+
+
+                                                                                          distance 1
+
+
+                                                                                          distance 2
+
+
+                                                                                          distance 3
+                                                  can we have
+                                                  back edges?
+
+
+
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                3
+                           unprocessed
+
+
+                           for
+                        processing
+
+
+
+
+   for
+processing
+
+
+
+
+             done, part of the tree
+                                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   4
+BFS (Frontier implementation)
+                        BFS for some
+                                     level: stores the nodes seen so far and their minimum
+                                     distance (i.e., level) from the root
+                        initial state 𝒔
+
+  parent={s:None}                    parent: stores the nodes seen so far and
+                                     their parent node
+                # previous level i-1 frontier: set of nodes with same level value 𝑖 from
+                                     which we explore the new nodes with level val. = 𝑖 + 1
+
+                  # next level i
+                                                                                                frontier
+                                                                                                i=2        frontier
+                                                                                     frontier
+                                                                                                           i=1023
+                                                                            frontier i=1
+                                                                            i= 0
+
+          parent[v]=u
+
+
+
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                       5
+                                        SUTD ISTD 50.004 Intro to Algorithms
+Conclusions
+ • Graphs: fundamental data structure
+   • Directed and undirected
+   • 4 possible representations
+ • Basic methods of graph search: BFS and DFS
+ • BFS: useful to find reachable nodes
+   • Constructs the “reachability” or “shortest path” tree: each node
+     knows who is the next node on his shortest path (minimum hop
+     count) towards the root node
+
+
+
+
+                          CSC4120 Design and Analysis of Algorithms     6
+                                     - C. Courcoubetis
+

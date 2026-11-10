@@ -1,0 +1,315 @@
+Analysis of graphs
+• Depth-First Search
+  • Cycle detection
+  • Topological sort
+      CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   1
+Objective
+• Define the depth-first search and the types of edges.
+• Cycle detection.
+• Topological sort.
+• DPV Chapter 3.
+
+
+
+
+                                                                                      2
+                        CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+Graph searches
+• We want to get from current Rubik state to “solved” state
+  • How do we explore the graph?
+• We are in a maze given by a graph.
+  • How do we walk on the graph to find an exit?
+• May use different procedures!! -> BFS, DFS.
+• https://www.cs.usfca.edu/~galles/visualization/BFS.html
+• https://www.cs.usfca.edu/~galles/visualization/DFS.html
+
+
+
+                        CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   3
+Depth-first search
+• Depth-first search is a surprisingly versatile linear-time procedure that
+  reveals a wealth of information about a graph.
+• The most basic question it addresses:
+   • What parts of the graph are reachable from a given vertex?
+• Exploring a graph = like exploring a maze.
+   • From current vertex, move to another.
+   • Until you get stuck.
+   • Then backtrack till you find a new place to explore.
+   • You may use the “left-hand” rule.
+
+
+
+
+                              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   4
+DFS algorithm
+• Find the nodes reachable from a given node 𝑣.                                        from DPV
+
+
+
+
+                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis              5
+         DFS algorithm (CLRS):
+         With colors and timing
+
+                                                What we do more here:
+                                                - use 3 colors: white (new), gray
+                                                (on DFS stack), black (finished),
+   in DPV book this                             - remember parent node.
+      “pre” time
+
+
+
+
+                   timestamps
+
+
+                                                    stack of nodes
+                                                    under exploration
+
+
+
+
+in DPV book this
+   “post” time
+    CSC4120 Design and Analysis of Algorithms                                       6
+               - C. Courcoubetis
+                                                                 In the DFS tree we
+ Types of edges                                                 show the tree edges
+
+
+• We consider the edge (𝑢, 𝑣) at the time we explore it:
+1. If 𝑣 is visited for the first time as we traverse the edge
+   (𝑢, 𝑣), then the edge is a tree edge
+2. Else, 𝑣 has already been visited:
+   • If 𝑣 is an ancestor of 𝑢, then edge (𝑢, 𝑣) is a back
+       edge.
+   • (b) Else, if 𝑣 is a descendant of 𝑢, then edge (𝑢, 𝑣) is                                            H
+       a forward edge.
+   • (c) Else, if 𝑣 is neither an ancestor or descendant of                                    ancestor and descendant:
+       𝑢, then edge (𝑢, 𝑣) is a cross edge. These type of                                      properties checked using
+                                                                                               the parent pointers 𝑣. 𝜋
+       edges result when 𝑢 and 𝑣 are reached by different
+       branches.
+                                                                                  Observe that the type of an
+                                                                                  edge is defined for a specific
+                                                                                  execution of the DFS.
+
+                                 CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                              7
+Properties of DFS                                                      Type of edge u ® v
+                                                                       back: v.d < u.d < u. f < v. f
+                                                                       forward: u.d < v.d < v. f < u. f
+                                                                       cross: v.d < v. f < u.d < u. f
+                                                                       tree: first time v is visited
+
+
+
+
+                                                                                         DF forest
+                                                                                         >1 trees
+
+
+    We use the timing information to determine the type of edges
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                    8
+Properties of DFS for undirected graphs
+                                                𝐺 undirected: only tree and back edges
+
+
+
+
+                                                                                          back
+           can we have                                                                    edge
+           forward and
+         cross edges if G
+          is undirected?
+
+
+ Example: edge 𝐹 cannot be a forward edge if the graph is undirected.
+ It would have been considered when we explore node w, and it would
+ be a back edge.
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis          9
+“White path theorem” (CLRS Theorem 22.9, see proof).
+• Let 𝑊𝑢 be the set of white nodes reachable from 𝑢 at the time of its discovery.
+• Then: they will all be connected to 𝑢 with a path of tree edges in the DFS tree,
+  ⇔ at the time of their exploration 𝑢 is grey ⇔ they will be finished before 𝑢
+  ⇔ 𝑢𝑑 < 𝑣𝑑 < 𝑣𝑓 < 𝑢𝑓 .                                               𝑢         𝑢
+                                                             𝑢𝑑 < 𝑣𝑑 < 𝑣𝑓 < 𝑢𝑓
+                                                                                                                             𝑠
+             u                                           u
+
+
+
+                                                                                                     𝑣                  𝑣
+                                                                                         Suppose 𝑣 is not a descendent of 𝑢 after the end of the
+                                                                                         DFS. Let 𝑡 be the first node along the path u->v in G that
+                                       v                                                 is not a descendent of 𝑢. we show contradiction!
+  v
+                                           [𝑣𝑑 , 𝑣𝑓 ]                                    If 𝑡 not descendent of 𝑢, then it was visited after 𝑢 was
+                                                                                         finished. But by then all the descendants of u were
+                                                                otherwise, it would be   finished, hence also node s, and 𝑠 should have explored
+      all white nodes reachable from                            a descendent of 𝑢        the edge (s,t), hence t should be a descendant of u.
+      𝑢 at the time of its discovery
+                                       CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                                     10
+Cycle detection
+• Theorem: Graph 𝐺 has a cycle iff DFS has a back edge.
+• Proof: a) cycle ⇐ back edge
+
+
+
+• b) cycle ⇒ back edge
+                                              Proof: use the “white path” theorem:
+                                              At the time of first visit to 𝑣0 , 𝑣𝑘 is white.
+                                              Hence, node 𝑣𝑘 will be finished (become black)
+                                              before 𝑣0 and it will try the edge 𝑣𝑘 , 𝑣0 . It will
+                                              be a back edge since 𝑣0 is grey at this time.
+
+                                                                           i.e., assume that 𝑣0 appears on the stack
+                                                                               before any other node of the cycle
+                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                               11
+Topological sort                                                                            think of an edge 𝑢 → 𝑣 as a
+                                                                                       “precondition”: 𝑢 must occur before 𝑣.
+• Topological sort of a DAG 𝐺 = (𝑉, 𝐸).
+• Theorem: 𝐺 is a DAG iff there is a linear ordering of all its 𝑣 ∈ 𝑉 s.t., if 𝑢, 𝑣 ∈ 𝐸,
+  then 𝑢 < 𝑣 in the above ordering, i.e., 𝑢, 𝑣 goes always from left to right.
+
+
+
+
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                                12
+Topological sort
+• Topological sort of a DAG 𝐺 = (𝑉, 𝐸).
+• Theorem: 𝐺 is a DAG iff there is a linear ordering of all its 𝑣 ∈ 𝑉 s.t., if 𝑢, 𝑣 ∈ 𝐸,
+  then 𝑢 < 𝑣 in the above ordering, i.e., 𝑢, 𝑣 goes always from left to right.
+
+
+                                                                                           In what sequence did
+                                                                                           this DFS visit the nodes?
+
+
+
+• Algorithm: given DAG 𝐺:
+1. Run any DFS(𝐺), compute finishing times of nodes.
+2. Linear order: the nodes in decreasing order of finishing times.
+
+
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                               13
+Topological sort
+• Topological sort of a DAG 𝐺 = (𝑉, 𝐸).
+• Theorem: 𝐺 is a DAG iff there is a linear ordering of all its 𝑣 ∈ 𝑉 s.t., if 𝑢, 𝑣 ∈ 𝐸,
+  then 𝑢 < 𝑣 in the above ordering, i.e., 𝑢, 𝑣 goes always from left to right.
+                              (3,6)
+        (1,12)   (2,11)
+                                          12 > 11 > 10 > 9 > 6 > 5                                        different DFS → perhaps
+                                                                                                          different ordering
+                                  (4,5)
+      (7,10)              (8,9)
+
+
+• Algorithm: given DAG 𝐺:
+1. Run any DFS(𝐺), compute finishing times of nodes.
+2. Linear order: the nodes in decreasing order of finishing times.
+
+
+                                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                        14
+Topological sort
+• Topological sort of a DAG 𝐺 = (𝑉, 𝐸).
+• Theorem: 𝐺 is a DAG iff there is a linear ordering of all its 𝑣 ∈ 𝑉 s.t., if 𝑢, 𝑣 ∈ 𝐸,
+  then 𝑢 < 𝑣 in the above ordering.
+
+                              12 > 11 > 10 > 9 > 6 > 5
+
+                                                                                              𝑣𝑓 > 𝑢𝑓
+
+
+
+
+• Algorithm: given DAG 𝐺:                                                      𝑣𝑓 > 𝑢𝑓
+                                                                                       (𝑢𝑑 , 𝑢𝑓 )
+                                                                    (𝑣𝑑 , 𝑣𝑓 )
+1. Run any DFS(𝐺), compute finishing times of nodes.                𝑣                     𝑢
+2. Linear order: the nodes in decreasing order of finishing times.
+Must prove: if G is a DAG, then there is no edge going right to left. 𝑢𝑓 < 𝑣𝑓 ⇒ must be back
+                                                                                                        edge, hence cannot be DAG
+                                CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                             15
+A corollary
+• Topological sort of a DAG 𝐺 = (𝑉, 𝐸).
+• Theorem: 𝐺 is a DAG iff there is a linear ordering of all its 𝑣 ∈ 𝑉 s.t., if 𝑢, 𝑣 ∈ 𝐸,
+  then 𝑢 < 𝑣 in the above ordering.
+                                                                                            Corollary: in a DAG, 𝑢, 𝑣 ∈ 𝐸 ⇔
+                           12 > 11 > 10 > 9 > 6 > 5
+                                                                                            𝑣𝑓 for any depth first
+                                                                                            search.
+
+
+• Algorithm: given DAG 𝐺:
+1. Run any DFS(𝐺), compute finishing times of nodes.
+2. Linear order: the nodes in decreasing order of finishing times.
+
+
+                              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                        16
+Properties of DAGs                                                                      must be a “sink” node
+
+• The last node 6 in the ordering has no outgoing edges.
+• If I remove 6 and its incoming edges, then the last node becomes 5, etc.
+                         “source” node
+                                                                        “sink” node
+
+
+
+
+                                                                                          must be a “source” node
+
+• The first node 1 in the ordering has no incoming edges.
+• If I remove it, the first node becomes node 4, etc.
+
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                               17
+Example
+
+
+                                                                          directed edge:
+                                                                        action i must occur
+                                                                          before action j
+
+
+
+
+          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                     18
+                   Non-recursive definition of BFS/DFS
+                   • BFS and DFS are similar except we use a
+                     queue for BFS and a stack for DFS (to
+                     store the new unexplored nodes).
+                   • BFS: the nodes are explored in sequence
+                     they are discovered: FIFO property of
+                     queue.
+                   • DFS: the nodes are explored in the
+                     reverse sequence they are discovered:
+                     LIFO property of stack.
+
+
+                                                        interesting to know that
+                                                        there is a non-recursive
+                                                        definition of DFS
+                                                                                   19
+CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+DFS: Stack implementation
+
+
+
+
+               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   20
+Conclusions
+• DFS is a graph search that generates a set of DFS trees.
+• It does more than just reachability by characterizing edges of the
+  graph.
+   • To characterize edges, it keeps timing information generated during
+     the search.
+• Useful to solve problems like cycle detection, topological sort in
+  DAGs, finding strong components in graphs (not examined here),
+  etc.
+• DFS can be done as a “dual” of BFS if we use a stack instead of a
+  queue for storing newly discovered nodes.
+
+                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   21
+CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   22
+CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   23
+CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   24
+

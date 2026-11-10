@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Islands and Trees</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Concept: a network-engineer's map table (islands coloured on the map, trees beside it). Cool paper ground, faint survey grid under the graph,
+   kept cables in deep teal, dead ends in rust, loops in amber. Mono for every number. */
+:root{
+  --display:'Bricolage Grotesque','Avenir Next','Segoe UI',system-ui,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F3F5F9; --ink:#111B2A; --muted:#566376; --line:#D2D9E2;
+  --kept:#0B6F6A; --kept-soft:#D2ECE9; --on-kept:#FFFFFF;
+  --skip:#B23A24; --skip-soft:#F8DED7;
+  --loop:#A86800; --loop-soft:#FBEAC6;
+  --ga:#2457C5; --ga-soft:#DAE5FA; --gb:#9A3A86; --gb-soft:#F1DAEC;
+  --i0:#2457C5;--i1:#9A3A86;--i2:#0B6F6A;--i3:#A86800;--i4:#B23A24;--i5:#4F7A1E;
+  --idle:#A3AEBC; --glow:rgba(36,87,197,.20); --grid:rgba(17,27,42,.06); --focus:#2457C5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141D; --surface:#151F2C; --surface-2:#1B2736; --ink:#E7EEF6; --muted:#9AA9BC; --line:#2A394C;
+    --kept:#3CC4B8; --kept-soft:#143F3C; --on-kept:#06201E;
+    --skip:#F27F68; --skip-soft:#45211A;
+    --loop:#F0B442; --loop-soft:#3E3012;
+    --ga:#7FA6FF; --ga-soft:#1D2D52; --gb:#DE92D3; --gb-soft:#46223F;
+    --i0:#7FA6FF;--i1:#DE92D3;--i2:#3CC4B8;--i3:#F0B442;--i4:#F27F68;--i5:#9BCB5E;
+  --idle:#52627A; --glow:rgba(127,166,255,.28); --grid:rgba(231,238,246,.06); --focus:#7FA6FF;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141D; --surface:#151F2C; --surface-2:#1B2736; --ink:#E7EEF6; --muted:#9AA9BC; --line:#2A394C;
+  --kept:#3CC4B8; --kept-soft:#143F3C; --on-kept:#06201E;
+  --skip:#F27F68; --skip-soft:#45211A;
+  --loop:#F0B442; --loop-soft:#3E3012;
+  --ga:#7FA6FF; --ga-soft:#1D2D52; --gb:#DE92D3; --gb-soft:#46223F;
+  --i0:#7FA6FF;--i1:#DE92D3;--i2:#3CC4B8;--i3:#F0B442;--i4:#F27F68;--i5:#9BCB5E;
+  --idle:#52627A; --glow:rgba(127,166,255,.28); --grid:rgba(231,238,246,.06); --focus:#7FA6FF;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+.page{max-width:1120px;margin:0 auto;padding-block:22px 44px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{margin:0 0 6px;font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font:700 clamp(28px,5vw,40px)/1.05 var(--display);letter-spacing:-.015em;text-wrap:balance}
+.lede{margin:10px 0 0;max-width:62ch;color:var(--muted);font-size:16px}
+.tabs{display:flex;gap:4px;margin-top:22px;padding:4px;width:fit-content;max-width:100%;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px}
+.tab{flex:none;border:0;background:transparent;color:var(--muted);padding:8px 14px;border-radius:9px;
+  font:600 14px var(--body);cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.method{margin:14px 0 16px;max-width:72ch;font-size:16px}
+.stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}
+.card h2{margin:0 0 10px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.side{display:grid;gap:18px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.stepno{font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stepname{font:700 22px var(--display);margin-left:8px}
+.chips{display:flex;gap:8px}
+.chip{display:inline-flex;gap:6px;align-items:baseline;padding:3px 10px;border:1px solid var(--line);border-radius:999px;
+  font:500 12px var(--body);color:var(--muted);background:var(--surface-2)}
+.chip b{font:600 14px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.graph{margin-top:10px;padding:8px;border:1px solid var(--line);border-radius:10px;background-color:var(--surface-2);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px}
+.graph svg{display:block;width:100%;max-width:540px;height:auto;margin:0 auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px;color:var(--muted)}
+.lg{display:inline-flex;align-items:center;gap:7px}
+.sw{display:inline-block;width:24px;height:0;border-top:5px solid var(--idle)}
+.sw.kept{border-color:var(--kept)} .sw.loop{border-color:var(--loop)}
+.sw.skipped{border-top:3px dashed var(--skip)} .sw.idle{border-top-width:2.5px}
+.sw.cross{border-color:var(--ink);border-top-width:4px} .sw.halo{border-color:var(--kept-soft);border-top-width:9px}
+.dot{display:inline-block;width:13px;height:13px;border-radius:50%;border:2px solid}
+.dot.ga{background:var(--ga-soft);border-color:var(--ga)} .dot.gb{background:var(--gb-soft);border-color:var(--gb)}
+.caption{margin-top:12px;padding:12px 14px;background:var(--surface-2);border-radius:10px;font-size:16px;line-height:1.55;min-height:6.4em}
+.caption b{font-family:var(--mono);font-weight:600}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 18px;border-radius:10px;
+  font:600 15px var(--body);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn.primary{background:var(--kept);border-color:var(--kept);color:var(--on-kept)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08)}
+.btn:disabled{opacity:.4;cursor:default}
+.hint{margin-left:auto;font-size:13px;color:var(--muted)}
+.progress{display:flex;gap:4px;margin-top:14px}
+.progress i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.progress i.done{background:var(--kept)}
+.note{margin:0 0 8px;font-size:14px;color:var(--muted)}
+.forest{display:block;margin:0 auto;height:auto}
+.ledger{display:grid;gap:2px}
+.row{display:grid;grid-template-columns:22px 70px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px}
+.row.now{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line)}
+.row .ix{font:500 12px var(--mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.row .nm{font:600 15px var(--mono)} .row .nm span{color:var(--muted);font-weight:500;margin-left:6px;font-variant-numeric:tabular-nums}
+.row .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.row .bar i{display:block;height:100%;background:var(--idle)}
+.st{font:600 12px var(--body);padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.st.kept{background:var(--kept-soft);border-color:transparent;color:var(--kept)}
+.st.skipped,.st.removed{background:var(--skip-soft);border-color:transparent;color:var(--skip)}
+.st.light{background:var(--kept);border-color:transparent;color:var(--on-kept)}
+.row.pending{opacity:.55}
+.toggles{display:grid;gap:8px}
+.tog{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:10px 12px;border-radius:10px;font:500 14px var(--body);cursor:pointer}
+.tog .box{flex:none;width:18px;height:18px;border-radius:5px;border:2px solid var(--muted)}
+.tog[aria-pressed="true"]{border-color:var(--kept);background:var(--kept-soft)}
+.tog[aria-pressed="true"] .box{background:var(--kept);border-color:var(--kept)}
+.history{margin-top:22px}
+.history h2{margin:0 0 10px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.strip{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px}
+.thumb{flex:none;width:max-content;min-width:124px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px;cursor:pointer;color:var(--ink)}
+.thumb svg{display:block;margin:0 auto}
+.thumb span{display:block;margin-top:4px;text-align:center;font:500 12px var(--mono);color:var(--muted)}
+.thumb.on{outline:2px solid var(--ink);outline-offset:1px}
+.howto{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 18px}
+.howto summary{cursor:pointer;padding:12px 0;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.howto summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+.story{padding:0 0 14px;max-width:78ch}
+.story p{margin:0 0 8px;font-size:15px;color:var(--ink)}
+.howto-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px 28px;padding:0 0 16px}
+.story h3,.howto h3{margin:0 0 6px;font:700 17px var(--display)}
+.howto p,.howto li{margin:0;font-size:14.5px;color:var(--muted)}
+.howto ul{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.howto b{color:var(--ink);font-weight:600}
+.kbd{display:inline-block;padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font:600 12.5px var(--body);color:var(--ink)}
+.total{margin-top:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+  font-size:15px;color:var(--muted);display:block}
+.total .sum{font:600 15px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.total[hidden]{display:none}
+.total.done{background:var(--kept-soft);border-color:var(--kept);color:var(--ink)}
+.total.done b{color:var(--kept)}
+/* svg */
+.edge{fill:none;stroke-linecap:round}
+.e-idle{stroke:var(--idle);stroke-width:2.5}
+.e-faint{stroke:var(--idle);stroke-width:2;opacity:.5}
+.e-kept{stroke:var(--kept);stroke-width:6}
+.e-skipped,.e-removed{stroke:var(--skip);stroke-width:3;stroke-dasharray:7 7}
+.e-loop{stroke:var(--loop);stroke-width:6}
+.e-cross{stroke:var(--ink);stroke-width:4.5}
+.e-light{stroke:var(--kept);stroke-width:8}
+.e-halo{stroke:var(--kept-soft);stroke-width:17}
+.e-glow{stroke:var(--glow);stroke-width:17}
+.mini .e-idle,.mini .e-faint{stroke-width:4}
+.mini .e-skipped,.mini .e-removed{stroke-width:5}
+.lab rect{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.lab text{font:600 13px var(--mono);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.l-idle text,.l-faint text{fill:var(--muted)}
+.l-kept rect,.l-light rect{stroke:var(--kept)} .l-kept text,.l-light text{fill:var(--kept)}
+.l-skipped rect,.l-removed rect{stroke:var(--skip)} .l-skipped text,.l-removed text{fill:var(--skip)}
+.l-loop rect{stroke:var(--loop)} .l-loop text{fill:var(--loop)}
+.node circle{fill:var(--surface);stroke:var(--ink);stroke-width:2.5}
+.node text{font:700 17px var(--display);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.mini .node text{font-size:27px}
+.node.ga circle{fill:var(--ga-soft);stroke:var(--ga)} .node.gb circle{fill:var(--gb-soft);stroke:var(--gb)}
+.fnode circle{fill:var(--surface);stroke:var(--muted);stroke-width:2}
+.fnode.root circle{stroke:var(--kept);stroke-width:3}
+.fnode.hl circle{fill:var(--loop-soft);stroke:var(--loop)}
+.fnode.moved circle{fill:var(--kept-soft)}
+.fnode text{font:700 15px var(--display);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.forest.mini .fnode text{font-size:10px}
+.rk{font:500 12px var(--mono);fill:var(--muted);text-anchor:middle}
+.farrow{fill:none;stroke:var(--muted);stroke-width:2}
+.farrow.new{stroke:var(--kept);stroke-width:3.2}
+.mk{fill:var(--muted)} .mk-new{fill:var(--kept)}
+@media (max-width:860px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .howto-grid{grid-template-columns:minmax(0,1fr)}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:no-preference){
+  .edge,.fnode circle{transition:stroke .15s,fill .15s}
+}
+
+.graph svg{max-width:640px}
+.stage{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.chips{flex-wrap:wrap}
+.row{grid-template-columns:22px 70px auto}
+.sw.merge{border-color:var(--i0)} .sw.wasted{border-top:3px dashed var(--skip)} .sw.faint{border-top:2px solid var(--idle);opacity:.5}
+.dot{background:color-mix(in srgb,var(--i0) 24%,var(--surface));border-color:var(--i0)}
+.e-merge{stroke-width:6} .e-wasted{stroke:var(--skip);stroke-width:3;stroke-dasharray:7 7}
+.lab rect{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}
+.node.isl circle{fill:color-mix(in srgb,var(--c) 26%,var(--surface));stroke:var(--c)}
+.node.walk circle{stroke-width:4}
+.fnode.isl circle{fill:color-mix(in srgb,var(--c) 26%,var(--surface));stroke:var(--c)}
+.fnode.root circle{stroke:var(--ink);stroke-width:3}
+.fnode.walk circle{fill:var(--loop-soft);stroke:var(--loop)}
+.rk{text-anchor:start;font-size:10px}
+.sz{font:600 11px var(--mono);fill:var(--ink);text-anchor:middle}
+.farrow.n{stroke:var(--kept);stroke-width:3.2}
+.farrow.c{stroke:var(--loop);stroke-width:3.2}
+.mk-cmp{fill:var(--loop)}
+.mins{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.mins figure{margin:0;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);text-align:center}
+.mins figcaption{font:500 12px var(--mono);color:var(--muted)} .mins figcaption b{color:var(--ink)}
+.mins svg{display:block;margin:0 auto 4px}
+.logt{width:100%;border-collapse:collapse;font-size:14px}.logt th,.logt td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}.logt th{font:600 12px var(--mono);color:var(--muted)}.logt td:last-child{font:600 14px var(--mono)}
+.hname{font:600 13px var(--body);margin:8px 0 2px}.bars{display:flex;gap:3px;align-items:flex-end;height:64px}.hb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}.hb span{font:600 11px var(--mono);color:var(--muted)}.hb i{display:block;width:100%;background:var(--kept);border-radius:3px 3px 0 0}.hb em{font:500 9px var(--mono);color:var(--muted);font-style:normal}.hcap{font:500 11px var(--mono);color:var(--muted);text-align:right}
+.stg{margin:0 0 10px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}.stg figcaption{font:600 13px var(--body);margin-bottom:2px}
+.dot,.mini .fnode text{vertical-align:middle}
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">CSC4120 · Greedy algorithms · union-find · pre-lecture</p>
+    <h1>Islands and Trees</h1>
+    <p class="lede">Twelve towns, eighteen cables arriving one at a time. For each cable we must decide fast: are its two ends already on the same island? Read the panel below, then step through. If you are following a chat session, answer there first and press Next afterwards.</p>
+  </header>
+
+  <details class="howto" open>
+    <summary>Before you start</summary>
+    <div class="story">
+      <h3>The story</h3>
+      <p>Twelve towns, A to L, start with no cables. Cables arrive one at a time, in a fixed list. Towns joined by arrived cables form an <b>island</b>: you can travel between any two towns of an island, and between towns of different islands you cannot. Each arriving cable either joins two islands into a bigger one, or links two towns that are already on the same island and so adds nothing.</p>
+      <p>A computer must answer one question again and again: <b>are these two towns on the same island?</b> It does so by representing every island as a <b>tree</b>. Each town stores an arrow to its <b>parent</b>. The town at the top, the <b>root</b>, has no parent and gives the island its name. To find the island of a town, follow the arrows up to the root.</p>
+      <p><b>The goal of this page.</b> A find is only as fast as the number of arrows it follows, so we want trees that stay short. In the lecture you will prove that, with the rank rule below, no find ever follows more than log<sub>2</sub> n arrows. This page does not prove that. It lets you see, on one example, the facts that the proof uses: how the rank rule works, why a town is never deeper than its root's rank, and how few towns a tree of a given rank can have. At the very end there is one extra move, <b>path compression</b>, that makes the cost per operation almost constant.</p>
+    </div>
+    <div class="howto-grid">
+      <div>
+        <h3>Words used here</h3>
+        <ul>
+          <li><b>Town</b>: a circle with a letter. <b>Cable</b>: a line joining two towns.</li>
+          <li><b>Island</b>: a set of towns joined by the cables that have arrived. Its colour on the map is just a help to the eye.</li>
+          <li><b>Tree, parent, root</b>: an island stored as arrows pointing up from each town to its parent. The root names the island.</li>
+          <li><b>makeset</b>(x): create a new island with the single town x. <b>find</b>(x): follow the arrows from x up to the root. <b>union</b>: join two islands by putting one root under the other.</li>
+          <li><b>Rank</b> (shown as r0, r1, ...): a number stored with each town, starting at 0. The rank of a root says roughly how tall its tree can be. A town&rsquo;s rank never changes once the town has a parent.</li>
+          <li><b>Depth</b> of a town: the number of arrows from it up to its root. A root has depth 0.</li>
+          <li><b>Path compression</b>: after a find, point every town on the path walked straight at the root.</li>
+          <li><b>log*</b> n: how many times you can take log<sub>2</sub>, starting from n, before the value is 1 or less. It grows extremely slowly.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>The tabs choose the method</h3>
+        <ul>
+          <li><b>Rank rule</b>: join two islands by putting the root of smaller rank under the root of larger rank. On a tie the second root goes under the first, and the new root&rsquo;s rank goes up by 1.</li>
+          <li><b>Path compression</b>: take this last. The same cables and the same rule, with one extra move after every find. It starts again from the beginning.</li>
+          <li>Take them left to right, or follow your chat session. Each tab keeps its own place.</li>
+          <li>The three counters above the map show the number of islands, the deepest town and the highest rank.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>The buttons move through it</h3>
+        <ul>
+          <li><b>Next</b> brings the next cable: the caption shows the two finds, the arrows each one follows, and what happens to the trees. At the end of a tab it moves on to the next tab.</li>
+          <li><b>Back</b> goes one step back. <b>Restart</b> returns the current tab to its first step.</li>
+          <li>The <b>Earlier steps</b> strip at the bottom keeps a small picture of every step you have seen. Click one to jump back to it.</li>
+          <li>In <b>Check your answer</b>, one button shows how many towns each tree has, and the other shows the smallest possible tree for each rank.</li>
+          <li>The <span class="kbd">←</span> and <span class="kbd">→</span> keys also step back and forward.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <div class="tabs" role="tablist" id="tabs" aria-label="Methods"></div>
+  <p class="method" id="method"></p>
+
+  <main class="stage">
+    <div class="side">
+    <section class="card" aria-label="Current step">
+      <div class="card-head">
+        <div><span class="stepno" id="stepno"></span><span class="stepname" id="stepname"></span></div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="graph" id="graph"></div>
+      <div class="legend" id="legend"></div>
+      <div class="caption" id="caption" aria-live="polite"></div>
+      <div class="controls">
+        <button class="btn" id="back" type="button">Back</button>
+        <button class="btn primary" id="next" type="button">Next</button>
+        <button class="btn" id="reset" type="button">Restart</button>
+        <span class="hint">Arrow keys also work</span>
+      </div>
+      <div class="progress" id="progress" aria-hidden="true"></div>
+    </section>
+      <section class="card">
+        <h2>Cables in the order they arrive</h2>
+        <div class="ledger" id="ledger"></div>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="card" id="logCard" hidden>
+        <h2>Why the cost is almost constant</h2>
+        <p class="note">The longer of the two finds for each of the 18 cables, in arrows followed:</p>
+        <div id="hist"></div>
+        <p class="note" id="histNote" style="margin-top:8px"></p>
+        <p class="note" style="margin-top:12px">A long find flattens the path it walked, so later finds from those towns take 1 arrow. And because of the rank rule, no tree can ever be deeper than log n, so long finds stay rare. Over many operations the average cost per operation is about <b>log*</b> n. This is how small that is:</p>
+        <table class="logt">
+          <tr><th>n</th><th>take log<sub>2</sub> until 1</th><th>log* n</th></tr>
+          <tr><td>2</td><td>2 &rarr; 1</td><td>1</td></tr>
+          <tr><td>4</td><td>4 &rarr; 2 &rarr; 1</td><td>2</td></tr>
+          <tr><td>16</td><td>16 &rarr; 4 &rarr; 2 &rarr; 1</td><td>3</td></tr>
+          <tr><td>65,536</td><td>65536 &rarr; 16 &rarr; 4 &rarr; 2 &rarr; 1</td><td>4</td></tr>
+          <tr><td>2<sup>65536</sup></td><td>five steps</td><td>5</td></tr>
+        </table>
+        <p class="note" style="margin-top:10px">So for any network that could ever be built, log* n is at most 5. It is not exactly a constant, but it is as good as one. The lecture proves why.</p>
+      </section>
+      <section class="card">
+        <h2>The islands as trees</h2>
+        <p class="note">Arrows point to the parent. The top town of each tree is its root and names the island. <b>r</b> is the rank. Each cable is shown step by step, from the situation before it to the result. Amber towns were walked by a find, amber arrows were redirected by path compression, and the green arrow is the new link.</p>
+        <div id="forest"></div>
+      </section>
+      <section class="card">
+        <h2>Check your answer</h2>
+        <div class="toggles">
+          <button class="tog" id="togSize" type="button" aria-pressed="false"><span class="box"></span>Show how many towns each tree has</button>
+          <button class="tog" id="togMin" type="button" aria-pressed="false"><span class="box"></span>Show the smallest tree for each rank</button>
+        </div>
+        <div id="minCard" hidden>
+          <p class="note" style="margin-top:12px">A root of rank k can only be made by joining two trees of rank k&minus;1. So the smallest tree for each rank is built like this:</p>
+          <div class="mins" id="mins"></div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <section class="history" aria-label="Earlier steps">
+    <h2>Earlier steps</h2>
+    <div class="strip" id="strip"></div>
+  </section>
+</div>
+
+<script>
+(function(){
+/* ---------- data: twelve towns, eighteen cables arriving one at a time ---------- */
+const TOWNS = 'ABCDEFGHIJKL'.split('');
+const POS = {
+  A: [36, 40], B: [36, 190], C: [126, 40], D: [126, 190],
+  E: [216, 40], F: [216, 190], G: [306, 40], H: [306, 190],
+  I: [396, 40], J: [396, 190], K: [486, 40], L: [486, 190],
+};
+const CABLES = [['A','B'],['C','D'],['E','F'],['G','H'],['A','C'],['E','G'],['B','D'],['C','E'],['F','H'],
+                ['I','J'],['K','L'],['I','K'],['G','I'],['H','J'],['D','F'],['J','L'],['F','G'],['I','L']];
+const cab = k => `${CABLES[k][0]}–${CABLES[k][1]}`;
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+function rootOf(parent, x) { while (parent[x] !== x) x = parent[x]; return x; }
+function depthOf(parent, x) { let d = 0; while (parent[x] !== x) { x = parent[x]; d++; } return d; }
+
+/* one picture of the whole structure: parents, ranks, island sizes, colours, deepest town */
+function snapshot(parent, rank, status, extra) {
+  const size = {}, members = {};
+  TOWNS.forEach(t => { const r = rootOf(parent, t); size[r] = (size[r] || 0) + 1; (members[r] = members[r] || []).push(t); });
+  const col = {};
+  TOWNS.forEach(t => (col[t] = -1));
+  Object.keys(members).forEach(r => {
+    if (members[r].length > 1) {
+      const c = Math.floor(TOWNS.indexOf(members[r].slice().sort()[0]) / 2) % 6;
+      members[r].forEach(t => (col[t] = c));
+    }
+  });
+  let deepest = TOWNS[0], dmax = -1;
+  TOWNS.forEach(t => { const d = depthOf(parent, t); if (d > dmax) { dmax = d; deepest = t; } });
+  const roots = TOWNS.filter(t => parent[t] === t);
+  return Object.assign({
+    parent: { ...parent }, rank: { ...rank }, status: [...status], size, col,
+    islands: roots.length, deepest, dmax, maxRank: Math.max(...TOWNS.map(t => rank[t])),
+    cur: null, moved: null, compressed: [], walked: [],
+  }, extra);
+}
+
+function buildUF(compress) {
+  const parent = {}, rank = {};
+  TOWNS.forEach(t => { parent[t] = t; rank[t] = 0; });
+  const status = CABLES.map(() => 'pending');
+  const states = [snapshot(parent, rank, status, {
+    short: 'Start',
+    text: 'Twelve towns, A to L. Each town is its own island: a tree with one town and rank 0. Cables arrive one at a time, in the order of the list. For each cable we ask whether its two ends are already on the same island. Press Next to see the first cable.',
+  })];
+
+  function find(x) {
+    const path = [x];
+    let y = x;
+    while (parent[y] !== y) { y = parent[y]; path.push(y); }
+    const root = y, changed = [];
+    if (compress) path.slice(0, -1).forEach(p => { if (parent[p] !== root) { parent[p] = root; changed.push(p); } });
+    return { root, path, changed };
+  }
+  const desc = (x, f) => `find(${x}) = ${f.root} (${plural(f.path.length - 1, 'arrow')}${f.path.length > 1 ? ': ' + f.path.join(' → ') : ''}).`;
+  const comp = f => (f.changed.length
+    ? ` Path compression: ${f.changed.join(' and ')} now ${f.changed.length > 1 ? 'point' : 'points'} straight to ${f.root}.` : '');
+
+  CABLES.forEach(([u, v], k) => {
+    const stages = [snapshot(parent, rank, status, { label: `Before cable ${k + 1} (${cab(k)})`, walked: [u, v] })];
+    const fu = find(u);
+    if (fu.changed.length) stages.push(snapshot(parent, rank, status, { label: `After find(${u}): ${fu.changed.join(' and ')} now ${fu.changed.length > 1 ? 'point' : 'points'} straight to ${fu.root}`, walked: fu.path, compressed: fu.changed }));
+    const fv = find(v);
+    if (fv.changed.length) stages.push(snapshot(parent, rank, status, { label: `After find(${v}): ${fv.changed.join(' and ')} now ${fv.changed.length > 1 ? 'point' : 'points'} straight to ${fv.root}`, walked: fv.path, compressed: fv.changed }));
+    const finds = `${desc(u, fu)}${comp(fu)} ${desc(v, fv)}${comp(fv)}`;
+    const walked = [...new Set([...fu.path, ...fv.path])];
+    const compressed = [...fu.changed, ...fv.changed];
+    let text, moved = null, tie = null, short;
+    if (fu.root === fv.root) {
+      status[k] = 'same';
+      short = `${cab(k)} same`;
+      text = `<b>Cable ${k + 1}: ${cab(k)}.</b> ${finds} Same root ${fu.root}, so ${u} and ${v} are already on one island. This cable adds nothing.`;
+    } else {
+      const ru = fu.root, rv = fv.root;
+      status[k] = 'merged';
+      let tail;
+      if (rank[ru] > rank[rv]) {
+        parent[rv] = ru; moved = rv;
+        tail = `${rv} has the smaller rank (${rank[rv]}), so it goes under ${ru} (rank ${rank[ru]}). ${ru} keeps rank ${rank[ru]}.`;
+      } else if (rank[ru] < rank[rv]) {
+        parent[ru] = rv; moved = ru;
+        tail = `${ru} has the smaller rank (${rank[ru]}), so it goes under ${rv} (rank ${rank[rv]}). ${rv} keeps rank ${rank[rv]}.`;
+      } else {
+        const r = rank[ru];
+        parent[rv] = ru; moved = rv; rank[ru] = r + 1;
+        tie = { root: ru, k: r + 1 };
+        tail = `${ru} and ${rv} both have rank ${r}. On a tie the second root goes under the first: ${rv} goes under ${ru}, and ${ru} gets rank ${r + 1}.`;
+      }
+      short = `${cab(k)} merge`;
+      text = `<b>Cable ${k + 1}: ${cab(k)}.</b> ${finds} Different roots, so two islands join. ${tail}`;
+    }
+    const st = snapshot(parent, rank, status, { cur: k, moved, compressed, walked, tie, short, text, finds: [fu.path.length - 1, fv.path.length - 1] });
+    if (moved) { stages.push(Object.assign({}, st, { label: 'After joining the two islands', walked: [], compressed: [] })); }
+    else if (stages.length === 1) { stages[0] = Object.assign({}, st, { label: 'Same island: nothing to join, no change', walked: [u, v], compressed: [], moved: null }); }
+    st.stages = stages;
+    states.push(st);
+  });
+  const last = states[states.length - 1];
+  const root = TOWNS.find(t => last.parent[t] === t);
+  last.text += ` All ${CABLES.length} cables have arrived. One island is left, named ${root}, with rank ${last.rank[root]}. The deepest town is ${last.deepest}: find(${last.deepest}) follows ${plural(last.dmax, 'arrow')}.`;
+  return states;
+}
+
+/* ---------- forest layout (trees drawn root-down) ---------- */
+function forestLayout(parent, nodes) {
+  const kids = {};
+  nodes.forEach(n => (kids[n] = []));
+  nodes.forEach(n => { if (parent[n] !== n) kids[parent[n]].push(n); });
+  const roots = nodes.filter(n => parent[n] === n);
+  const pos = {};
+  let cursor = 0, maxDepth = 0;
+  function place(n, d) {
+    maxDepth = Math.max(maxDepth, d);
+    const ks = kids[n];
+    if (!ks.length) { pos[n] = { x: cursor + 0.5, d }; cursor += 1; return; }
+    ks.forEach(k => place(k, d + 1));
+    const xs = ks.map(k => pos[k].x);
+    pos[n] = { x: (Math.min(...xs) + Math.max(...xs)) / 2, d };
+  }
+  roots.forEach(r => { place(r, 0); cursor += 0.3; });
+  return { pos, roots, width: cursor - 0.3, maxDepth };
+}
+
+/* the smallest tree with a root of rank k: two smallest trees of rank k-1, one root under the other */
+function smallestTree(k) {
+  const letters = 'abcdefghijklmnop'.split('');
+  let n = 0;
+  const parent = {}, rank = {};
+  function make(k) {
+    if (k === 0) { const x = letters[n++]; parent[x] = x; rank[x] = 0; return x; }
+    const a = make(k - 1), b = make(k - 1);
+    parent[b] = a; rank[a] = k;
+    return a;
+  }
+  make(k);
+  return { nodes: letters.slice(0, n), parent, rank };
+}
+
+
+
+const RANK_S = buildUF(false);
+const COMP_S = buildUF(true);
+
+const SECTIONS = [
+  { key:'rank', label:'Rank rule', states:RANK_S,
+    method:'Cables arrive in the order of the list on the right. For each one, find the root of each end. <b>Same root</b>: the towns are already on one island and the cable adds nothing. <b>Different roots</b>: join the islands by putting the root of smaller rank under the root of larger rank. On a tie the second root goes under the first, and the new root&rsquo;s rank goes up by 1.',
+    legend:[['merge','Cable that joined two islands'],['wasted','Cable inside one island: adds nothing'],['faint','Not arrived yet']] },
+  { key:'comp', label:'Path compression', states:COMP_S,
+    method:'The same cables and the same rule. One extra move: after a find, every town on the path it walked is pointed straight at the root (amber arrows). Ranks do not change, and no town leaves its tree. A long find flattens its path, so the next finds through those towns are short.',
+    legend:[['merge','Cable that joined two islands'],['wasted','Cable inside one island: adds nothing'],['faint','Not arrived yet']] },
+];
+
+const $ = id => document.getElementById(id);
+const ui = { sec:0, idx:SECTIONS.map(() => 0), seen:SECTIONS.map(() => 0), size:false, min:false };
+let uid = 0;
+
+/* ---------- drawing ---------- */
+function mapSVG(st) {
+  const P = t => POS[t];
+  let s = `<svg viewBox="0 0 522 232" role="img" aria-label="Twelve towns and eighteen possible cables">`;
+  const colOf = k => st.col[CABLES[k][0]];
+  const line = (k, cls, style) => `<line class="edge ${cls}" ${style ? `style="${style}"` : ''} x1="${P(CABLES[k][0])[0]}" y1="${P(CABLES[k][0])[1]}" x2="${P(CABLES[k][1])[0]}" y2="${P(CABLES[k][1])[1]}"/>`;
+  CABLES.forEach((_, k) => { if (st.status[k] === 'pending' && st.cur !== k) s += line(k, 'e-faint'); });
+  CABLES.forEach((_, k) => { if (st.status[k] === 'same' && st.cur !== k) s += line(k, 'e-wasted'); });
+  CABLES.forEach((_, k) => { if (st.status[k] === 'merged') s += line(k, 'e-merge', `stroke:var(--i${colOf(k)})`); });
+  if (st.cur !== null) {
+    s += line(st.cur, 'e-glow');
+    s += line(st.cur, st.status[st.cur] === 'same' ? 'e-wasted' : 'e-merge', st.status[st.cur] === 'merged' ? `stroke:var(--i${colOf(st.cur)})` : '');
+    const [u, v] = CABLES[st.cur], mx = (P(u)[0] + P(v)[0]) / 2, my = (P(u)[1] + P(v)[1]) / 2;
+    s += `<g class="lab"><rect x="${mx - 13}" y="${my - 11}" width="26" height="22" rx="11"/><text x="${mx}" y="${my + 0.5}">${st.cur + 1}</text></g>`;
+  }
+  TOWNS.forEach(t => {
+    const c = st.col[t];
+    s += `<g class="node${c >= 0 ? ' isl' : ''}${st.walked.includes(t) ? ' walk' : ''}" ${c >= 0 ? `style="--c:var(--i${c})"` : ''}><circle cx="${P(t)[0]}" cy="${P(t)[1]}" r="17"/><text x="${P(t)[0]}" y="${P(t)[1] + 1}">${t}</text></g>`;
+  });
+  return s + '</svg>';
+}
+
+function forestSVG(st, o) {
+  o = o || {};
+  const mini = !!o.mini, nodes = o.nodes || TOWNS;
+  const dx = mini ? 20 : o.compact ? 38 : 54, dy = mini ? 26 : o.compact ? 46 : 58, r = mini ? 8 : o.compact ? 13 : 15, pad = mini ? 8 : 16;
+  const topOff = mini ? pad + r : r + (o.size ? 24 : 14);
+  const L = forestLayout(st.parent, nodes);
+  const W = Math.ceil(pad * 2 + L.width * dx + (mini ? 0 : 20)), H = Math.ceil(topOff + L.maxDepth * dy + r + pad);
+  const id = 'ah' + (uid++);
+  const X = n => pad + L.pos[n].x * dx, Y = n => topOff + L.pos[n].d * dy;
+  const mk = mini ? 5 : 7;
+  let s = `<svg class="forest${mini ? ' mini' : ''}" viewBox="0 0 ${W} ${H}" ${mini ? `width="${W}" height="${H}"` : `width="100%" style="max-width:${Math.round(W * 1.2)}px"`} role="img" aria-label="Islands as trees">`;
+  s += `<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="${mk}" markerHeight="${mk}" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker>`
+     + `<marker id="${id}n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="${mk}" markerHeight="${mk}" orient="auto-start-reverse"><path class="mk-new" d="M0 0L10 5L0 10z"/></marker>`
+     + `<marker id="${id}c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="${mk}" markerHeight="${mk}" orient="auto-start-reverse"><path class="mk-cmp" d="M0 0L10 5L0 10z"/></marker></defs>`;
+  nodes.forEach(n => {
+    const p = st.parent[n];
+    if (p === n) return;
+    const x1 = X(n), y1 = Y(n), x2 = X(p), y2 = Y(p);
+    const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    const kind = st.moved === n ? 'n' : (st.compressed && st.compressed.includes(n) ? 'c' : '');
+    s += `<line class="farrow${kind ? ' ' + kind : ''}" x1="${(x1 + ux * r).toFixed(1)}" y1="${(y1 + uy * r).toFixed(1)}" x2="${(x2 - ux * (r + 3)).toFixed(1)}" y2="${(y2 - uy * (r + 3)).toFixed(1)}" marker-end="url(#${id}${kind})"/>`;
+  });
+  nodes.forEach(n => {
+    const root = st.parent[n] === n;
+    const c = st.col ? st.col[n] : -1;
+    const cls = 'fnode' + (root ? ' root' : '') + (c >= 0 ? ' isl' : '') + (st.walked && st.walked.includes(n) ? ' walk' : '');
+    s += `<g class="${cls}" ${c >= 0 ? `style="--c:var(--i${c})"` : ''}><circle cx="${X(n)}" cy="${Y(n)}" r="${r}"/><text x="${X(n)}" y="${Y(n) + 1}">${n}</text></g>`;
+    if (!mini) s += `<text class="rk" x="${X(n) + r + 2}" y="${Y(n) + 4}">r${st.rank[n]}</text>`;
+    if (!mini && root && o.size) s += `<text class="sz" x="${X(n)}" y="${Y(n) - r - 6}">${plural(st.size[n], 'town')}</text>`;
+  });
+  return s + '</svg>';
+}
+
+/* ---------- panels ---------- */
+function legendHTML(S) {
+  return S.legend.map(([k, t]) => `<span class="lg"><i class="sw ${k}"></i>${t}</span>`).join('')
+    + `<span class="lg"><i class="dot"></i>Town on a bigger island (colour = island)</span>`;
+}
+
+function ledgerHTML(st) {
+  return CABLES.map((_, k) => {
+    const s = st.status[k];
+    const cls = 'row' + (s === 'pending' ? ' pending' : '') + (st.cur === k ? ' now' : '');
+    const pill = s === 'pending' ? '<span class="st">waiting</span>'
+      : s === 'merged' ? '<span class="st kept">joined islands</span>' : '<span class="st skipped">same island</span>';
+    return `<div class="${cls}"><span class="ix">${k + 1}</span><span class="nm">${cab(k)}</span>${pill}</div>`;
+  }).join('');
+}
+
+function captionHTML(st) {
+  let t = st.text;
+  if (ui.size) {
+    if (st.tie) t += ` Check: ${st.tie.root} has rank ${st.tie.k} and exactly ${st.size[st.tie.root]} towns, and 2<sup>${st.tie.k}</sup> = ${2 ** st.tie.k}.`;
+    if (st.cur === CABLES.length - 1) {
+      const root = TOWNS.find(x => st.parent[x] === x);
+      t += ` ${root} has rank ${st.rank[root]} and ${st.size[root]} towns; a rank-${st.rank[root]} tree needs at least ${2 ** st.rank[root]}.`;
+    }
+  }
+  return t;
+}
+
+function chipsHTML(st) {
+  return `<span class="chip">Islands <b>${st.islands}</b></span>`
+    + `<span class="chip">Deepest <b>${st.dmax === 0 ? 'none' : st.deepest + ' · ' + plural(st.dmax, 'arrow')}</b></span>`
+    + `<span class="chip">Highest rank <b>${st.maxRank}</b></span>`;
+}
+
+function histHTML() {
+  const row = (S, name) => {
+    const bars = S.slice(1).map((s, k) => {
+      const m = Math.max(...s.finds);
+      return `<div class="hb"><span>${m}</span><i style="height:${6 + m * 14}px"></i><em>${k + 1}</em></div>`;
+    }).join('');
+    return `<div class="hrow"><div class="hname">${name}</div><div class="bars">${bars}</div></div>`;
+  };
+  return row(RANK_S, 'Rank rule only') + row(COMP_S, 'With path compression') + '<div class="hcap">cable number</div>';
+}
+
+function minsHTML() {
+  let h = '';
+  for (let k = 0; k <= 3; k++) {
+    const T = smallestTree(k);
+    h += `<figure>${forestSVG({ parent: T.parent, rank: T.rank, moved: null, compressed: [], walked: [], col: null, size: {} }, { nodes: T.nodes })}<figcaption>rank ${k}: <b>${T.nodes.length}</b> ${T.nodes.length === 1 ? 'town' : 'towns'}</figcaption></figure>`;
+  }
+  return h;
+}
+
+/* ---------- render ---------- */
+function render() {
+  const S = SECTIONS[ui.sec], i = ui.idx[ui.sec], st = S.states[i], N = S.states.length;
+  ui.seen[ui.sec] = Math.max(ui.seen[ui.sec], i);
+
+  document.querySelectorAll('.tab').forEach((b, k) => b.setAttribute('aria-selected', String(k === ui.sec)));
+  $('method').innerHTML = S.method;
+  $('stepno').textContent = i === 0 ? 'Start' : `Cable ${i} of ${N - 1}`;
+  $('stepname').textContent = st.cur !== null ? cab(st.cur) : '';
+  $('chips').innerHTML = chipsHTML(st);
+
+  $('graph').innerHTML = mapSVG(st);
+  $('legend').innerHTML = legendHTML(S);
+  $('caption').innerHTML = captionHTML(st);
+  $('forest').innerHTML = st.stages
+    ? st.stages.map(g => `<figure class="stg"><figcaption>${g.label}</figcaption>${forestSVG(g, { size: ui.size, compact: true })}</figure>`).join('')
+    : forestSVG(st, { size: ui.size });
+  $('ledger').innerHTML = ledgerHTML(st);
+
+  $('togSize').setAttribute('aria-pressed', String(ui.size));
+  $('togMin').setAttribute('aria-pressed', String(ui.min));
+  $('minCard').hidden = !ui.min;
+  const showLog = S.key === 'comp' && i === N - 1;
+  $('logCard').hidden = !showLog;
+  if (showLog) { $('hist').innerHTML = histHTML(); $('histNote').innerHTML = 'Look at the two rows. Without compression, long finds of 2 or 3 arrows keep coming. With compression, a long find flattens the path it walked, so the finds that follow through those towns are short: after cable 16 (3 arrows), cables 17 and 18 need only 1 arrow each. A long find can only happen again for towns that were never walked, like L at cable 16.'; }
+  if (ui.min && !$('mins').innerHTML) $('mins').innerHTML = minsHTML();
+
+  $('back').disabled = i === 0 && ui.sec === 0;
+  const atEnd = i === N - 1, lastSec = ui.sec === SECTIONS.length - 1;
+  $('next').textContent = atEnd && !lastSec ? `Next: ${SECTIONS[ui.sec + 1].label}` : 'Next';
+  $('next').disabled = atEnd && lastSec;
+  $('progress').innerHTML = S.states.map((_, k) => `<i class="${k <= i ? 'done' : ''}"></i>`).join('');
+
+  let strip = '';
+  for (let k = 0; k <= ui.seen[ui.sec]; k++) {
+    const s2 = S.states[k];
+    strip += `<button class="thumb${k === i ? ' on' : ''}" type="button" data-k="${k}" aria-label="Go to ${s2.short}">${forestSVG(s2, { mini: true })}<span>${s2.short}</span></button>`;
+  }
+  $('strip').innerHTML = strip;
+  const on = $('strip').querySelector('.on');
+  if (on) $('strip').scrollLeft = on.offsetLeft - $('strip').clientWidth / 2 + on.offsetWidth / 2;
+}
+
+function go(d) {
+  const S = SECTIONS[ui.sec], N = S.states.length;
+  const j = ui.idx[ui.sec] + d;
+  if (j >= N) { if (ui.sec < SECTIONS.length - 1) { ui.sec++; ui.idx[ui.sec] = 0; } }
+  else if (j < 0) { if (ui.sec > 0) { ui.sec--; ui.idx[ui.sec] = SECTIONS[ui.sec].states.length - 1; } }
+  else ui.idx[ui.sec] = j;
+  render();
+}
+
+$('tabs').innerHTML = SECTIONS.map((S, k) => `<button class="tab" role="tab" type="button" data-s="${k}">${S.label}</button>`).join('');
+$('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) { ui.sec = +b.dataset.s; render(); } });
+$('strip').addEventListener('click', e => { const b = e.target.closest('.thumb'); if (b) { ui.idx[ui.sec] = +b.dataset.k; render(); } });
+$('next').addEventListener('click', () => go(1));
+$('back').addEventListener('click', () => go(-1));
+$('reset').addEventListener('click', () => { ui.idx[ui.sec] = 0; ui.seen[ui.sec] = 0; render(); });
+$('togSize').addEventListener('click', () => { ui.size = !ui.size; render(); });
+$('togMin').addEventListener('click', () => { ui.min = !ui.min; render(); });
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+});
+render();
+})();
+</script>
+
+</body>
+</html>

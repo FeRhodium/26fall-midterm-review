@@ -1,0 +1,252 @@
+• Graph representations
+
+       CSC4120 Design and Analysis of Algorithms
+                                                   1
+Objective
+• What are graphs and how we represent them.
+• Motivate graph searches
+• For the material of this week:
+  • Read DPV Chapter 3 (up to 3.4) and Chapter 4.1-4.2.
+  • Same material in CLRS 22.1-22.2.
+
+
+
+
+                          SUTD ISTD 50.004 Intro to Algorithms
+Graphs                                                   a             b
+                                                                               a
+
+
+
+
+• 𝐺 = (𝑉, 𝐸).
+                                                                           b       c
+• V : a set of vertices.                     c        d
+
+
+   • 𝑉 usually denoted by 𝑛.
+• 𝐸 ⊆ 𝑉 × 𝑉: a set of edges (pairs of vertices).
+   • 𝐸 usually denoted by 𝑚.
+   • Note: 𝑚 ≤ 𝑛2 = 𝑂(𝑛2 ).
+• Two flavors:
+   • Pay attention to order of vertices in edge: directed graph.
+   • Ignore order: undirected graph.
+        • Then only 𝑛(𝑛 − 1)/2 possible edges.
+
+                                SUTD ISTD 50.004 Intro to Algorithms
+ Examples
+• Undirected                                   • Directed
+• 𝑉 = {𝑎, 𝑏, 𝑐, 𝑑}                             • 𝑉 = {𝑎, 𝑏, 𝑐}
+• 𝐸 = {{𝑎, 𝑏}, {𝑎, 𝑐}, {𝑏, 𝑐}, {𝑏, 𝑑}, {𝑐, 𝑑}} • 𝐸 = { 𝑎, 𝑐 , 𝑎, 𝑏 , (𝑐, 𝑏)}
+
+
+                                                                       a
+          a            b
+
+
+
+
+                                                           b               c
+          c            d
+
+
+                                SUTD ISTD 50.004 Intro to Algorithms
+Instances/applications
+• Web
+   • crawling
+• Social Network
+   • friend finder
+• Computer Networks
+   • internet routing
+   • connectivity
+• Game states
+   • Rubik’s cube, chess
+
+
+                           SUTD ISTD 50.004 Intro to Algorithms
+Graphs can model state transitions                           example by C.
+                                                          Daskalakis, MIT slides
+
+
+
+
+                   SUTD ISTD 50.004 Intro to Algorithms
+State (configuration) graph
+                                                                          state 𝑠0
+• Imagine a graph that has:
+   • One vertex for each state (configuration)
+     of the cube.
+   • One edge for each move from a vertex
+      • 6 faces to twist.
+      • 3 non-trivial ways to twist
+      (1/4, 2/4, 3/4).
+                                                                          state 𝑠1
+      • Hence 18 edges out of each state.
+• Solve the puzzle by finding a path
+(sequence of moves) from initial state
+to “solved” state.
+
+                                   SUTD ISTD 50.004 Intro to Algorithms
+Combinatorics
+• Different state for each arrangement and
+ orientation of 8 cubelets.
+   • 8 cubelets in each position: 8! Possibilities.
+   • Each cube has 3 orientations: 3 8 Possibilities.
+   • Total: 8! 38 = 264,539,320 vertices.
+• But divide out 24 orientations of whole cube.
+• And there are three separate connected components
+  (twist one cube out of place 3 ways).
+• Result: 3,674,160 states to search.
+
+
+
+                                      SUTD ISTD 50.004 Intro to Algorithms
+State exploration                                            distance             90°   90° and 180°
+                                                         0                  1           1
+
+• One start vertex                                       1                  6           9
+                                                         2                  27          54
+• 6 others reachable by
+                                                         3                  120         321
+   one 90° turn              New states                  4                  534         1847
+• From those, 27 others by                               5                  2,256       9,992
+
+  another 90° turn…                                      6                  8,969       50,136
+                                                         7                  33,058      227,526
+• And so on…
+                                                         8                  114,149     870,072
+                                                         9                  360,508     1,887,748
+                                                         10                 930,588     623,800
+                                                         11                 1,350,852   2,644
+                                                         12                 782,536
+                                                         13                 90,280
+                                                         14                 276
+                                     SUTD ISTD 50.004 Intro to Algorithms               diameter
+Another example of the graph being implicit
+  Consider the transition function                           the transition function maps
+        ì (x + 3)mod11 if x = 2k,k ³ 0                          states to sets of states
+        ï
+  x ' = í (x + 2)mod11 if x = 2k + 1,k ³ 0
+        ï
+        î          x - 1 if x > 1
+
+
+  A. Is 10 reachable from 0?
+  B. Which is the minimum number of steps needed to reach 4?
+  Solution: construct the reachability graph!
+
+
+
+
+                                  SUTD ISTD 50.004 Intro to Algorithms
+Reachability tree                    ì (x + 3)mod11 if x = 2k,k ³ 0
+                                     ï
+                                x' = í (x + 2)mod11 if x = 2k + 1,k ³ 0
+                                     ï
+                                     î          x - 1 if x > 1
+
+
+
+
+                                                           shortest-path tree
+
+
+
+
+                    SUTD ISTD 50.004 Intro to Algorithms
+Problems that relate to graphs
+• Reachability: find all states reachable from a given                         In what order
+                                                                             should I do these
+  state.                                                                           tasks
+• Shortest paths: find the shortest path between state
+  𝑠𝑜 and 𝑠𝑑 .
+• Find if a directed graph has a cycle.
+• Topological sort: find a “causal ordering” of the
+  nodes if it exists.
+• Shortest spanning tree: find the “shortest” subgraph
+  that contains all nodes.
+• Strongly connected components: maximal sets of
+  nodes that from every node can reach any other
+  node in the set (mixing).
+                                 CSC4120 Design and Analysis of Algorithms
+• Many other….                                                                               12
+ Graph representation
+• To solve graph problems, must examine graph.
+• Need to represent in computer.
+• Four representations with pros/cons.
+   • Adjacency lists (of neighbors for each vertex).    similar
+   • Incidence lists (of edges from each vertex).
+   • Adjacency matrix (0-1, which pairs are adjacent).
+   • Implicit representation (as a “find neighbor” function).
+                                                                                               How to represent
+                                                                                               directed graphs?
+
+
+                                    adjacency matrix                        incidence matrix
+                   adjacency list
+
+                                     SUTD ISTD 50.004 Intro to Algorithms
+Adjacency list
+• For each vertex 𝑣, list all its
+  neighbors (vertices to which it is
+  connected by an edge).
+  •   Array 𝐴 of |𝑉| linked lists.
+  •   For 𝑣 ∈ 𝑉, the list 𝐴[𝑣] stores
+      neighbors {𝑢| 𝑣, 𝑢 ∈ 𝐸}.
+• Directed graph: store only
+  outgoing neighbors.
+• Undirected graph: stores same
+  edge information in two places
+
+                                  SUTD ISTD 50.004 Intro to Algorithms
+Example of adjacency list with edge weights
+
+
+
+
+                   CSC4120 Design and Analysis of Algorithms
+                                                               15
+Implicit representation
+• Don’t store graph at all.
+• Implement function 𝐴𝑑𝑗(𝑢) that
+   returns list of neighbors or
+   edges of 𝑢.
+• Requires no space, use it as
+   you need it.
+• Can be very efficient.
+
+
+                         SUTD ISTD 50.004 Intro to Algorithms
+Trade-off: Space               need log 𝑛 bits to
+                               represent a vertex
+
+
+• Assume vertices {1, … , 𝑛}
+• Adjacency lists:
+  • One list node per edge.
+  • So, space is Θ( 𝑛 + 𝑚 log 𝑛) bits.
+• Adjacency matrix:
+  • Uses 𝑛2 entries.                                                         1   2   3   4
+
+  • But each entry can be just one bit.                                 1é 1     1   1   0 ù
+                                                                         ê                  ú
+  • So, space is Θ(𝑛2) bits.                                          A= ê 0
+                                                                       2         0   1   0 ú
+                                                                       3ê 0      0   0   1 ú
+• Matrix better only for very dense                                    4ê 0              1 úû
+                                                                         ë       1   0
+  graphs, i.e., 𝑚 near 𝑛2 .
+                               SUTD ISTD 50.004 Intro to Algorithms
+Trade-off: Time
+• Add an edge.
+  • Both data structures are 𝑂(1).
+• Check “is there an edge from 𝑢 to 𝑣”?
+  • Matrix is 𝑂(1).
+  • Adjacency list of 𝑢 must be scanned.
+• Visit all neighbors of 𝑢 (very common).
+  • Adjacency list is 𝑂(# neighbors).
+  • Matrix is Θ(𝑛).
+• Remove edge.
+  • Like find + add.
+                             SUTD ISTD 50.004 Intro to Algorithms
+

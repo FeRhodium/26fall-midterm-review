@@ -1,0 +1,181 @@
+Midterm 2021
+
+Problem 1: (30 pts)
+A. (10 pts) Consider the recurrence 𝑇(𝑛) = 𝑇(𝑛 − 2) + 2 log 𝑛. Prove using the substitution
+method that 𝑇(𝑛) = 𝑂(𝑛 log 𝑛).
+Solution:
+
+
+
+
+B. (10 pts) Prove or disprove that 3𝑛 = 𝑂(2𝑛 ).
+Solution:
+
+
+
+
+C. (10 pts) Give the solution in 𝛩(. ) of each of the recurrences: (apply Master Theorem)
+                𝑛
+a) 𝑇(𝑛) = 3𝑇 ( 2 ) + 1.
+                𝑛
+b) 𝑇(𝑛) = 3𝑇 ( 2 ) + 𝑛.
+                𝑛
+c) 𝑇(𝑛) = 3𝑇 ( 2 ) + 𝑛 2.
+
+a) 𝑇(𝑛) = 𝑂(𝑛 log2 3 ); b) 𝑇(𝑛) = 𝑂(𝑛 log2 3 ); c) 𝑇(𝑛) = 𝑛 2 .
+a)
+Problem 2 (28 pt)
+Multiple choice questions:
+   • Every correct choice adds 4 points
+   • Every wrong choice adds −4 points
+   • The total score always remains ≥ 0
+The value 𝑑 depends on the specific question.
+
+Choose one or more true answers from the following multiple-choice questions. No need to add
+explanations.
+
+A. Consider the following sorting algorithm: We split the array into four equal-size pieces, then
+recursively sort each piece, and then merge them into one sorted array. The complexity is
+a) 𝛩(𝑛 2 ) b) 𝛩(𝑛 log 𝑛) c) 𝛩(𝑛 log log 𝑛) d) none of the above. (Choose one)
+Solution: b)
+
+B. Remember that in radix sort the complexity is 𝛩((𝑛 + 𝑘)𝑑). I assume that you are familiar
+with counting sort and radix sort and what the various parameters represent, otherwise you can
+re-derive them from scratch with simple arguments.
+Choose one or more correct statements:
+a) Counting sort has complexity Θ(𝑛) when 𝑘 (the maximum value of the keys) grows as 𝑂(𝑛1.5).
+b) Counting sort has complexity Θ(𝑛) when 𝑘 is 𝑂(1).
+c) In radix sort 𝑘, 𝑑 are parameters to be determined and increasing 𝑘 decreases 𝑑.
+d) Radix sort is not applicable if the maximum value 𝑀 of a key is increasing faster than a
+polynomial in 𝑛.
+e) Radix sort is asymptotically more efficient than mergesort if M grows 𝑂(𝑛𝑐 ) but has same
+complexity if M grows 𝛩(𝑛 log 𝑛 ).
+f) if the keys are sorted, then radix sort takes 𝑂(𝑛) time.
+Solution: b), c), e)
+
+C. Storing a graph 𝐺 = (𝑉, 𝐸), where |𝑉| = 𝑛, |𝐸| = 𝑚. Choose one or more correct statements:
+a) In the adjacency matrix representation of 𝐺 we use 𝑂(𝑛 log 𝑛) bits.
+b) In the adjacency list representation, we use 𝑂((𝑛 + 𝑚) log 𝑛) bits.
+c) A graph is dense when 𝑚 = 10𝑛.
+d) A graph is dense when 𝑚 = 0.9𝑛2.
+e) If 𝑚 = 0.8𝑛2 then we prefer the adjacency list representation.
+f) If we use DFS we prefer to represent graphs using adjacency lists.
+Solution: b), d), f).
+Problem 3. True or False [36 pt] (12 parts)
+For each of the following questions, circle either T (True) or F (False). There is no penalty for
+incorrect answers. Add a simple 2-line explanation that justifies your answer.
+
+(a) T F [3 pt] Given two heaps with n elements each, it is possible to construct a single heap
+comprising all 2n elements in O(n) time.
+Solution: TRUE. Simply traverse each heap and read off all 2n elements into a new array. Then,
+make the array into a heap in O(n) time by calling MAX- HEAPIFY for i = 2n down to 1.
+
+(b) T F [3 pt] Building a heap with n elements can always be done in O(n log n) time.
+Solution: TRUE. In fact, we can build a heap in O(n) time by putting the elements in an array
+and then calling MAX-HEAPIFY for i = n down to 1.
+
+(c) T F [3 pt] Given a hash table of size n with n elements, using chaining, the minimum element
+can always be found in O(1) time.
+Solution: FALSE. We will need to scan the entire table; this takes Ω(n) time.
+
+(d) T F [3 pt] Running merge sort on an array of size n which is already correctly
+sorted takes O(n) time.
+Solution: FALSE. The merge sort algorithm presented in class always divides
+and merges the array O(log n) times, so the running time is always O(n log n).
+
+(e) T F [3 pt] We can always find the maximum in a min-heap in O(log n) time.
+Solution: FALSE. The maximum element in a min-heap can be anywhere in the bottom level of
+the heap. There are up to n/2 elements in the bottom level, so finding the maximum can take up
+to O(n) time.
+
+(f) T F [3 pt] In a heap of depth d, there must be at least 2d elements. (Assume the depth of the
+first element (or root) is zero).
+Solution: TRUE. The minimum number of elements in a heap of depth d is
+one more than the maximum number of elements in a heap of depth (d − 1).
+Since a level at depth d in a binary heap can have up to 2d elements, the number d−1
+of elements at depth (d − 1) is ∑𝑑−1    𝑖     𝑑
+                                  𝑖=0 2 = 2 − 1. So the minimum number of elements to
+increase the depth from n-1 to n is to add one more, i.e., 2𝑑 − 1 + 1 = 2𝑑 .
+
+(g) T F [3 pt] Consider a family of hash functions consisting of the single hash function ℎ(𝑘) =
+𝑘 − 99, 𝑘 = 0,1, … , 99. Suppose that the set of keys 𝑈 = {0, … ,10}. Is this family of hash
+functions universal?
+Solution: TRUE. For any 2 keys that are different, they are mapped with probability 1 to a
+different location.
+
+(h) TF [3 pt] Consider the hash function defined earlier, a hash table of size 𝑚 = 100, and keys
+from 𝑈 = {0, … ,10}.
+Does this hash function satisfy the simple uniform hashing assumption?
+Solution: FALSE. The first part of the hash table is never used.
+(i) T F [3 pt] Inserting an element into a binary search tree of size n always takes O(log n) time.
+Solution: FALSE. Inserting an element into a binary search tree takes O(h) time, where h is the
+height of the tree. If the tree is not balanced, h may be much larger than log n (as large as n − 1).
+
+(j) T F [3 pt] Any two (possibly unbalanced) BSTs containing n elements each can be merged
+into a single balanced BST in O(n) time.
+Solution: TRUE. Use in-order traversal of the two BSTs to create two sorted lists of length n in
+O(n) time, merge them into a single sorted list of length 2n in O(n) time, and then create a
+balanced BST from the sorted lists in O(n) time.
+
+(k) T F [3 pt] Breath First Search (BFS) detects loops in directed graphs in 𝑂(|𝑉| + |𝐸|).
+Solution: FALSE.
+
+(l) T F [3 pt] BFS detects loops in undirected graphs in 𝑂(max{|𝑉 |, |𝐸 |}).
+Solution: TRUE.
+Problem 4 (30 pt)
+A. (10 pt) We are inserting 50,60,70,65,80,90,62,69 into an AVL tree that is initially empty.
+Show the result after each insertion (after the corresponding balancing operation if it is
+necessary).
+
+                                                                                          𝑛
+B. (10 pt) Bob give Alice a comparison-based sorting algorithm that runs in 𝑇(𝑛) = 4𝑇 ( 5 ) +
+5𝑛 log log 𝑛. Is there enough information to know if Bob’s algorithm is correct? Y/N. Justify.
+
+                                              𝑛    𝑛
+C. (10 pt) Same as B) above but 𝑇(𝑛) = 7𝑇 ( 6 ) + 58. Y/N. Justify.
+
+Solution:
+A)
+
+
+
+
+B) Using MS theorem, complexity is Θ(𝑛 log log 𝑛) less than Θ(𝑛 log 𝑛), not possible. Hence
+YES.
+C) Using MS theorem, complexity is Θ(𝑛 𝑎 ) where 𝑎 > 1. Hence NO since 𝑛𝑎 = 𝑛𝑛 𝑎−1 that
+grows faster than Θ(𝑛 log 𝑛), and we are not sure if it is correct or not.
+
+Problem 5 (30 pt)
+You have been asked by your boss to implement a priority queue type of data structure
+supporting the following 3 operations: (𝑁 is the size of the set of keys)
+     • insert(x): in time O(log 𝑁),
+     • fortytwo(): returns the 42nd smallest item in time 𝑂(1),
+     • delfortytwo(): deletes the 42nd smallest item in time 𝑂(log 𝑛).
+If there are less than 42 items, then we return or delete the largest among them.
+
+Note: In the general case we keep track and return the 𝑘th smallest element for some fixed k (in
+our case 𝑘 = 42). This generalizes the typical priority queue where 𝑘 = 1.
+
+Explain (using pseudocode) how to implement the required functionality using one or more data
+structures that we have defined in the course. To simplify your code, assume that all operations
+take place when the system has many items, i.e., 𝑁 ≥ 43. You don’t have to include the logic of
+the special case of what happens if 𝑁 ≤ 42, and assume that there are always a 42nd and a 43d
+element in the set and that your data structures are correctly initialized.
+Hint: Use two heaps.
+Problem 6 (20 pt)
+Describe an efficient method to merge two balanced BSTs with 𝑛 elements into a balanced BST.
+We expect your algorithm to run in 𝑂(𝑛) time.
+
+
+
+
+Problem 7 (20 pt)
+Suppose the graph 𝐺 = (𝑉, 𝐸) has edges of length ∈ {1,2}. Propose an algorithm that runs in
+𝑂(|𝑉| + |𝐸|) for creating the shortest path tree.
+Bonus question (10 pt): what would the complexity of using this algorithm be as a function of
+𝑛, 𝑚, 𝑘 when the edge lengths are ∈ {1,2, … , 𝑘}?
+
+Solution: break each edge of length 𝑘 into 𝑘 edges of length 1 and add the corresponding new
+intermediate 𝑘 − 1 states for each such edge. Use BFS on the resulting graph. Then the
+complexity is 𝑂(𝑛 + 𝑘𝑚).
+

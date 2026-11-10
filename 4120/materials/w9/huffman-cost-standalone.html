@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Tree Costs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Concept: a code-tree worksheet on the same cool paper ground; leaves are boxed, internal nodes teal circles, the newest merge amber. */
+:root{
+  --display:'Bricolage Grotesque','Avenir Next','Segoe UI',system-ui,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --bg:#EDF0F4; --surface:#FFFFFF; --surface-2:#F3F5F9; --ink:#111B2A; --muted:#566376; --line:#D2D9E2;
+  --kept:#0B6F6A; --kept-soft:#D2ECE9; --on-kept:#FFFFFF;
+  --skip:#B23A24; --skip-soft:#F8DED7;
+  --loop:#A86800; --loop-soft:#FBEAC6;
+  --ga:#2457C5; --ga-soft:#DAE5FA; --gb:#9A3A86; --gb-soft:#F1DAEC;
+  --idle:#A3AEBC; --glow:rgba(36,87,197,.20); --grid:rgba(17,27,42,.06); --focus:#2457C5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141D; --surface:#151F2C; --surface-2:#1B2736; --ink:#E7EEF6; --muted:#9AA9BC; --line:#2A394C;
+    --kept:#3CC4B8; --kept-soft:#143F3C; --on-kept:#06201E;
+    --skip:#F27F68; --skip-soft:#45211A;
+    --loop:#F0B442; --loop-soft:#3E3012;
+    --ga:#7FA6FF; --ga-soft:#1D2D52; --gb:#DE92D3; --gb-soft:#46223F;
+    --idle:#52627A; --glow:rgba(127,166,255,.28); --grid:rgba(231,238,246,.06); --focus:#7FA6FF;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141D; --surface:#151F2C; --surface-2:#1B2736; --ink:#E7EEF6; --muted:#9AA9BC; --line:#2A394C;
+  --kept:#3CC4B8; --kept-soft:#143F3C; --on-kept:#06201E;
+  --skip:#F27F68; --skip-soft:#45211A;
+  --loop:#F0B442; --loop-soft:#3E3012;
+  --ga:#7FA6FF; --ga-soft:#1D2D52; --gb:#DE92D3; --gb-soft:#46223F;
+  --idle:#52627A; --glow:rgba(127,166,255,.28); --grid:rgba(231,238,246,.06); --focus:#7FA6FF;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+.page{max-width:1120px;margin:0 auto;padding-block:22px 44px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{margin:0 0 6px;font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font:700 clamp(28px,5vw,40px)/1.05 var(--display);letter-spacing:-.015em;text-wrap:balance}
+.lede{margin:10px 0 0;max-width:62ch;color:var(--muted);font-size:16px}
+.tabs{display:flex;gap:4px;margin-top:22px;padding:4px;width:fit-content;max-width:100%;overflow-x:auto;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:12px}
+.tab{flex:none;border:0;background:transparent;color:var(--muted);padding:8px 14px;border-radius:9px;
+  font:600 14px var(--body);cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.method{margin:14px 0 16px;max-width:72ch;font-size:16px}
+.stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}
+.card h2{margin:0 0 10px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.side{display:grid;gap:18px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.stepno{font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stepname{font:700 22px var(--display);margin-left:8px}
+.chips{display:flex;gap:8px}
+.chip{display:inline-flex;gap:6px;align-items:baseline;padding:3px 10px;border:1px solid var(--line);border-radius:999px;
+  font:500 12px var(--body);color:var(--muted);background:var(--surface-2)}
+.chip b{font:600 14px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.graph{margin-top:10px;padding:8px;border:1px solid var(--line);border-radius:10px;background-color:var(--surface-2);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px}
+.graph svg{display:block;width:100%;max-width:540px;height:auto;margin:0 auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px;color:var(--muted)}
+.lg{display:inline-flex;align-items:center;gap:7px}
+.sw{display:inline-block;width:24px;height:0;border-top:5px solid var(--idle)}
+.sw.kept{border-color:var(--kept)} .sw.loop{border-color:var(--loop)}
+.sw.skipped{border-top:3px dashed var(--skip)} .sw.idle{border-top-width:2.5px}
+.sw.cross{border-color:var(--ink);border-top-width:4px} .sw.halo{border-color:var(--kept-soft);border-top-width:9px}
+.dot{display:inline-block;width:13px;height:13px;border-radius:50%;border:2px solid}
+.dot.ga{background:var(--ga-soft);border-color:var(--ga)} .dot.gb{background:var(--gb-soft);border-color:var(--gb)}
+.caption{margin-top:12px;padding:12px 14px;background:var(--surface-2);border-radius:10px;font-size:16px;line-height:1.55;min-height:6.4em}
+.caption b{font-family:var(--mono);font-weight:600}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 18px;border-radius:10px;
+  font:600 15px var(--body);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn.primary{background:var(--kept);border-color:var(--kept);color:var(--on-kept)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08)}
+.btn:disabled{opacity:.4;cursor:default}
+.hint{margin-left:auto;font-size:13px;color:var(--muted)}
+.progress{display:flex;gap:4px;margin-top:14px}
+.progress i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.progress i.done{background:var(--kept)}
+.note{margin:0 0 8px;font-size:14px;color:var(--muted)}
+.forest{display:block;margin:0 auto;height:auto}
+.ledger{display:grid;gap:2px}
+.row{display:grid;grid-template-columns:22px 70px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px}
+.row.now{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line)}
+.row .ix{font:500 12px var(--mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.row .nm{font:600 15px var(--mono)} .row .nm span{color:var(--muted);font-weight:500;margin-left:6px;font-variant-numeric:tabular-nums}
+.row .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.row .bar i{display:block;height:100%;background:var(--idle)}
+.st{font:600 12px var(--body);padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.st.kept{background:var(--kept-soft);border-color:transparent;color:var(--kept)}
+.st.skipped,.st.removed{background:var(--skip-soft);border-color:transparent;color:var(--skip)}
+.st.light{background:var(--kept);border-color:transparent;color:var(--on-kept)}
+.row.pending{opacity:.55}
+.toggles{display:grid;gap:8px}
+.tog{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:10px 12px;border-radius:10px;font:500 14px var(--body);cursor:pointer}
+.tog .box{flex:none;width:18px;height:18px;border-radius:5px;border:2px solid var(--muted)}
+.tog[aria-pressed="true"]{border-color:var(--kept);background:var(--kept-soft)}
+.tog[aria-pressed="true"] .box{background:var(--kept);border-color:var(--kept)}
+.history{margin-top:22px}
+.history h2{margin:0 0 10px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.strip{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px}
+.thumb{flex:none;width:max-content;min-width:124px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px;cursor:pointer;color:var(--ink)}
+.thumb svg{display:block;margin:0 auto}
+.thumb span{display:block;margin-top:4px;text-align:center;font:500 12px var(--mono);color:var(--muted)}
+.thumb.on{outline:2px solid var(--ink);outline-offset:1px}
+.howto{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 18px}
+.howto summary{cursor:pointer;padding:12px 0;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.howto summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+.story{padding:0 0 14px;max-width:78ch}
+.story p{margin:0 0 8px;font-size:15px;color:var(--ink)}
+.howto-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px 28px;padding:0 0 16px}
+.story h3,.howto h3{margin:0 0 6px;font:700 17px var(--display)}
+.howto p,.howto li{margin:0;font-size:14.5px;color:var(--muted)}
+.howto ul{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.howto b{color:var(--ink);font-weight:600}
+.kbd{display:inline-block;padding:0 7px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font:600 12.5px var(--body);color:var(--ink)}
+.total{margin-top:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+  font-size:15px;color:var(--muted);display:block}
+.total .sum{font:600 15px var(--mono);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.total[hidden]{display:none}
+.total.done{background:var(--kept-soft);border-color:var(--kept);color:var(--ink)}
+.total.done b{color:var(--kept)}
+/* svg */
+.edge{fill:none;stroke-linecap:round}
+.e-idle{stroke:var(--idle);stroke-width:2.5}
+.e-faint{stroke:var(--idle);stroke-width:2;opacity:.5}
+.e-kept{stroke:var(--kept);stroke-width:6}
+.e-skipped,.e-removed{stroke:var(--skip);stroke-width:3;stroke-dasharray:7 7}
+.e-loop{stroke:var(--loop);stroke-width:6}
+.e-cross{stroke:var(--ink);stroke-width:4.5}
+.e-light{stroke:var(--kept);stroke-width:8}
+.e-halo{stroke:var(--kept-soft);stroke-width:17}
+.e-glow{stroke:var(--glow);stroke-width:17}
+.mini .e-idle,.mini .e-faint{stroke-width:4}
+.mini .e-skipped,.mini .e-removed{stroke-width:5}
+.lab rect{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.lab text{font:600 13px var(--mono);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.l-idle text,.l-faint text{fill:var(--muted)}
+.l-kept rect,.l-light rect{stroke:var(--kept)} .l-kept text,.l-light text{fill:var(--kept)}
+.l-skipped rect,.l-removed rect{stroke:var(--skip)} .l-skipped text,.l-removed text{fill:var(--skip)}
+.l-loop rect{stroke:var(--loop)} .l-loop text{fill:var(--loop)}
+.node circle{fill:var(--surface);stroke:var(--ink);stroke-width:2.5}
+.node text{font:700 17px var(--display);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.mini .node text{font-size:27px}
+.node.ga circle{fill:var(--ga-soft);stroke:var(--ga)} .node.gb circle{fill:var(--gb-soft);stroke:var(--gb)}
+.fnode circle{fill:var(--surface);stroke:var(--muted);stroke-width:2}
+.fnode.root circle{stroke:var(--kept);stroke-width:3}
+.fnode.hl circle{fill:var(--loop-soft);stroke:var(--loop)}
+.fnode.moved circle{fill:var(--kept-soft)}
+.fnode text{font:700 15px var(--display);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.forest.mini .fnode text{font-size:10px}
+.rk{font:500 12px var(--mono);fill:var(--muted);text-anchor:middle}
+.farrow{fill:none;stroke:var(--muted);stroke-width:2}
+.farrow.new{stroke:var(--kept);stroke-width:3.2}
+.mk{fill:var(--muted)} .mk-new{fill:var(--kept)}
+@media (max-width:860px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .howto-grid{grid-template-columns:minmax(0,1fr)}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:no-preference){
+  .edge,.fnode circle{transition:stroke .15s,fill .15s}
+}
+.toggles[hidden],.stage[hidden],.history[hidden],.opts[hidden],.card[hidden],.note[hidden]{display:none}
+.graph svg{max-width:none}
+.opts{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.opt{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:9px;font:600 13.5px var(--body);cursor:pointer}
+.opt[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.opt:hover{border-color:var(--ink)}
+.lgl{display:inline-block;width:20px;height:16px;border:1.6px solid var(--ink);border-radius:5px;background:var(--surface)}
+.lgc{display:inline-block;width:16px;height:16px;border-radius:50%;border:2px solid var(--kept);background:var(--kept-soft)}
+.lgn{display:inline-block;width:16px;height:16px;border-radius:50%;border:2px solid var(--loop);background:var(--loop-soft)}
+.lgs{display:inline-block;width:16px;height:16px;border-radius:5px;border:3px solid var(--ga);background:var(--ga-soft)}
+.ed{stroke:var(--idle);stroke-width:2.5;fill:none}
+.eb{font:600 12px var(--mono);fill:var(--muted);text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:var(--surface-2);stroke-width:4px}
+.lf{fill:var(--surface);stroke:var(--ink);stroke-width:1.6}
+.lf-s{font:600 12px var(--mono);fill:var(--muted);text-anchor:middle}
+.lf-f{font:700 17px var(--mono);fill:var(--ink);text-anchor:middle}
+.in{fill:var(--kept-soft);stroke:var(--kept);stroke-width:2}
+.in-t{font:700 15px var(--mono);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.fresh .in{fill:var(--loop-soft);stroke:var(--loop)}
+.nb.sel .in,.nb.sel .lf{stroke:var(--ga);stroke-width:4;fill:var(--ga-soft)}
+.nb.click{cursor:pointer}
+.nb.click:hover .in,.nb.click:hover .lf{stroke:var(--ga)}
+.nb:focus{outline:none}
+.nb:focus-visible .in,.nb:focus-visible .lf{stroke:var(--focus);stroke-width:4}
+.n1{font:700 13px var(--mono);fill:var(--ink);text-anchor:middle}
+.n2{font:500 12px var(--mono);fill:var(--muted);text-anchor:middle}
+.logt{width:100%;border-collapse:collapse;font-size:14px}
+.logt th,.logt td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;font-variant-numeric:tabular-nums}
+.logt th{font:600 12px var(--mono);color:var(--muted)}
+.logt td.m{font:600 14px var(--mono)}
+.logt td.q{color:var(--muted)}
+.logt tr.sum td{font-weight:700;border-bottom:0}
+.logt tr.now td{background:var(--surface-2)}
+.empty{margin:0;font-size:14px;color:var(--muted)}
+.att{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:14px}
+.att li{display:flex;gap:10px;justify-content:space-between;padding:6px 8px;border-radius:8px;background:var(--surface-2)}
+.att b{font:600 14px var(--mono)}
+.att span{color:var(--muted);font:500 12.5px var(--mono)}
+.thumb svg{width:auto;max-width:170px;height:auto;max-height:104px}
+.opts .lab{align-self:center;font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.filestrip{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:14px;color:var(--muted)}
+.filestrip[hidden]{display:none}
+.fk{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;margin-right:8px;color:var(--muted)}
+.seq{font:600 15px var(--mono);color:var(--ink);word-spacing:.2em;overflow-wrap:anywhere}
+.bits{font:700 14px var(--mono);color:var(--ink);white-space:nowrap;margin-left:6px}
+.total .sum{white-space:normal;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">CSC4120 · Greedy algorithms · pre-lecture</p>
+    <h1>Code Tree Costs</h1>
+    <p class="lede">A file is written with a few symbols. Each symbol gets a code word of 0s and 1s, read off a binary tree. Which tree writes the file in the fewest bits? Read the story below, then work through the tabs. If you are following a chat session, answer there first and press Next afterwards.</p>
+  </header>
+
+  <details class="howto" open>
+    <summary>Before you start</summary>
+    <div class="story">
+      <h3>The story</h3>
+      <p>A long file is written using only a few symbols, say A, B, C and D. In the file, A appears 8 times, B appears 4 times, and so on. The number of times a symbol appears is its <b>frequency</b>.</p>
+      <p>Here is such a file, 16 symbols long: <span class="seq">A A B A C A B A D A A B C A B D</span>. A appears 8 times, B 4 times, C 2 times and D 2 times. Writing it down means replacing every symbol by a string of bits, and we want the final string to be as short as possible.</p>
+      <p>To store the file we replace each symbol by a <b>code word</b>, a string of 0s and 1s, and we want the whole file to take as few bits as possible. To be able to read the file back without confusion, we draw a binary tree and put the symbols at its <b>leaves</b>. The code word of a symbol is the path from the top of the tree, the <b>root</b>, down to its leaf: write 0 for a step to the left and 1 for a step to the right. No code word can then be the beginning of another.</p>
+      <p>The <b>cost</b> of a tree is the number of bits needed to write the whole file with its code words. We are looking for a tree with the lowest cost.</p>
+    </div>
+    <div class="howto-grid">
+      <div>
+        <h3>Words used here</h3>
+        <ul>
+          <li><b>Symbol</b> and <b>frequency</b>: a letter, and how many times it appears in the file.</li>
+          <li><b>Leaf</b>: a box with a symbol and its frequency. <b>Internal node</b>: a circle, any node that is not a leaf, the root included.</li>
+          <li><b>Frequency of an internal node</b>: the sum of the frequencies of the leaves below it.</li>
+          <li><b>Depth</b> of a node: the number of steps from the root down to it. It is also the length of the code word of a leaf.</li>
+          <li><b>Cost</b> of a tree: for each symbol, its frequency times its depth, all added up. This is the number of bits of the file.</li>
+          <li><b>Merge</b>: take two trees and put them under a new internal node. The frequency of the new node is the sum of the frequencies of the two trees.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>The tabs</h3>
+        <ul>
+          <li><b>Cost of a tree</b>: two different trees for the same four symbols. Work out the cost of each in two ways, from the leaves and from the internal nodes.</li>
+          <li><b>Merge view</b>: build a tree from the bottom, one merge at a time, and watch the cost grow as you go.</li>
+          <li><b>Merge game</b>: you choose which two trees to merge. Try to reach the lowest cost you can, on three data sets.</li>
+          <li>Take them from left to right, or follow your chat session.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>The buttons</h3>
+        <ul>
+          <li>On the first two tabs, <b>Next</b> shows the next step, <b>Back</b> goes one step back and <b>Restart</b> returns to the first step.</li>
+          <li><b>Check your answer</b> shows the numbers that the chat has just asked you for. Press it only after you have answered in the chat.</li>
+          <li>The <b>Earlier steps</b> strip at the bottom keeps a small picture of every step you have seen. Click one to jump back to it.</li>
+          <li>On the game tab, click the top node of a tree to select it, then click a second tree to merge the two. <b>Undo</b> takes back the last merge and <b>Restart</b> starts the data set again.</li>
+          <li>The <span class="kbd">←</span> and <span class="kbd">→</span> keys also step back and forward on the first two tabs.</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <div class="tabs" role="tablist" id="tabs" aria-label="Parts"></div>
+  <p class="method" id="method"></p>
+  <div class="opts" id="opts" hidden></div>
+
+  <main class="stage" id="stepView">
+    <section class="card" aria-label="Current step">
+      <div class="card-head">
+        <div><span class="stepno" id="stepno"></span><span class="stepname" id="stepname"></span></div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="filestrip" id="fileRow" hidden></div>
+      <div class="graph" id="graph"></div>
+      <div class="legend" id="legend"></div>
+      <div class="total" id="total" aria-live="polite"></div>
+      <div class="caption" id="caption" aria-live="polite"></div>
+      <div class="toggles" id="checkRow" style="margin-top:12px"><button class="tog" id="togCheck" type="button" aria-pressed="false"><span class="box"></span>Check your answer</button></div>
+      <div class="controls">
+        <button class="btn" id="back" type="button">Back</button>
+        <button class="btn primary" id="next" type="button">Next</button>
+        <button class="btn" id="reset" type="button">Restart</button>
+        <span class="hint">Arrow keys also work</span>
+      </div>
+      <div class="progress" id="progress" aria-hidden="true"></div>
+    </section>
+    <aside class="side">
+      <section class="card">
+        <h2 id="sideTitle"></h2>
+        <div id="sideBody"></div>
+      </section>
+    </aside>
+  </main>
+
+  <main class="stage" id="gameView" hidden>
+    <section class="card" aria-label="Merge game">
+      <div class="card-head">
+        <div><span class="stepno" id="gno"></span><span class="stepname" id="gname"></span></div>
+        <div class="chips" id="gchips"></div>
+      </div>
+      <div class="graph" id="ggraph"></div>
+      <div class="total" id="gtotal" aria-live="polite"></div>
+      <div class="caption" id="gcaption" aria-live="polite"></div>
+      <div class="controls">
+        <button class="btn" id="gundo" type="button">Undo</button>
+        <button class="btn" id="greset" type="button">Restart</button>
+      </div>
+    </section>
+    <aside class="side">
+      <section class="card">
+        <h2>Merges so far</h2>
+        <div id="glog"></div>
+      </section>
+      <section class="card" id="gres" hidden>
+        <h2>The finished tree</h2>
+        <div id="gresBody"></div>
+        <div class="toggles" style="margin-top:12px"><button class="tog" id="togMin" type="button" aria-pressed="false"><span class="box"></span>Check: the lowest cost possible</button></div>
+        <p class="note" id="minOut" style="margin:10px 0 0" hidden></p>
+      </section>
+      <section class="card" id="gatt" hidden>
+        <h2>Your attempts on this data set</h2>
+        <div id="gattBody"></div>
+      </section>
+    </aside>
+  </main>
+
+  <section class="history" id="histSec" aria-label="Earlier steps">
+    <h2>Earlier steps</h2>
+    <div class="strip" id="strip"></div>
+  </section>
+</div>
+
+<script>
+(function(){
+const leaf = (sym, f) => ({ sym, f, kids: null, key: sym });
+const join = (a, b) => ({ f: a.f + b.f, kids: [a, b], key: a.key + b.key });
+const leaves = t => (t.kids ? [...leaves(t.kids[0]), ...leaves(t.kids[1])] : [t]);
+const post = t => (t.kids ? [...post(t.kids[0]), ...post(t.kids[1]), t] : []);
+function codes(t, p = '', o = {}) {
+  if (!t.kids) { o[t.sym] = p; return o; }
+  codes(t.kids[0], p + '0', o); codes(t.kids[1], p + '1', o); return o;
+}
+const costLeaves = t => { const c = codes(t); return leaves(t).reduce((s, l) => s + l.f * c[l.sym].length, 0); };
+const costNodes = t => post(t).reduce((s, n) => s + n.f, 0);
+
+const DATA = {
+  d1: { label: 'Data set 1', items: [['A', 8], ['B', 4], ['C', 2], ['D', 2]] },
+  d2: { label: 'Data set 2', items: [['A', 1], ['B', 2], ['C', 3], ['D', 4]] },
+  d3: { label: 'Data set 3', items: [['A', 45], ['B', 13], ['C', 12], ['D', 16], ['E', 9], ['F', 5]] },
+};
+const freqLine = items => items.map(([s, f]) => `${s} ${f}`).join(', ');
+const total = items => items.reduce((s, [, f]) => s + f, 0);
+
+const memo = {};
+function minCost(fr) {
+  if (fr.length === 1) return 0;
+  const key = fr.slice().sort((a, b) => a - b).join(',');
+  if (memo[key] !== undefined) return memo[key];
+  let best = Infinity;
+  for (let i = 0; i < fr.length; i++) for (let j = i + 1; j < fr.length; j++) {
+    const rest = fr.filter((_, k) => k !== i && k !== j); const s = fr[i] + fr[j];
+    best = Math.min(best, s + minCost([...rest, s]));
+  }
+  return (memo[key] = best);
+}
+const fixedCost = items => total(items) * Math.ceil(Math.log2(items.length));
+
+/* trees for the first tab: the same four symbols, two shapes */
+function treeA() { return join(join(leaf('A', 8), leaf('B', 4)), join(leaf('C', 2), leaf('D', 2))); }
+function treeB() { return join(leaf('A', 8), join(leaf('B', 4), join(leaf('C', 2), leaf('D', 2)))); }
+
+/* merge sequences for the second tab: pairs of keys */
+const ORDERS = [
+  { name: 'Order 1', seq: [['C', 'D'], ['B', 'CD'], ['A', 'BCD']] },
+  { name: 'Order 2', seq: [['C', 'D'], ['A', 'B'], ['AB', 'CD']] },
+];
+function runMerges(items, seq) {
+  let forest = items.map(([s, f]) => leaf(s, f));
+  const states = [{ forest: forest.slice(), terms: [], cost: 0, fresh: null, pair: null }];
+  seq.forEach(([ka, kb]) => {
+    const ia = forest.findIndex(t => t.key === ka), ib = forest.findIndex(t => t.key === kb);
+    const a = forest[ia], b = forest[ib], m = join(a, b);
+    const lo = Math.min(ia, ib), hi = Math.max(ia, ib);
+    forest = forest.filter((_, k) => k !== hi); forest[lo] = m;
+    const prev = states[states.length - 1];
+    states.push({ forest: forest.slice(), terms: [...prev.terms, m.f], cost: prev.cost + m.f, fresh: m, pair: [a, b] });
+  });
+  return states;
+}
+
+const $ = id => document.getElementById(id);
+const TA = treeA(), TB = treeB();
+const ITEMS1 = DATA.d1.items;
+const FILE = 'AABACABADAABCABD';
+function fileStripHTML(t, showEnc) {
+  let h = `<div><span class="fk">File</span><span class="seq">${FILE.split('').join(' ')}</span></div>`;
+  if (t && showEnc) { const c = codes(t); h += `<div style="margin-top:6px"><span class="fk">Encoded</span><span class="seq">${FILE.split('').map(x => c[x]).join(' ')}</span><b class="bits">${costLeaves(t)} bits</b></div>`; }
+  return h;
+}
+
+/* ---------- drawing: a row of trees, left child = 0, right child = 1 ---------- */
+function forestSVG(trees, o = {}) {
+  const LW = 64, GAP = 22, DY = 74, TOP = 30, R = 19, LH = 44, LWD = 48;
+  let cursor = 8, maxd = 0;
+  const P = new Map();
+  trees.forEach(t => {
+    (function rec(n, d) {
+      if (!n.kids) { P.set(n, { x: cursor + LW / 2, d }); cursor += LW; }
+      else { n.kids.forEach(k => rec(k, d + 1)); P.set(n, { x: (P.get(n.kids[0]).x + P.get(n.kids[1]).x) / 2, d }); }
+      if (d > maxd) maxd = d;
+    })(t, 0);
+    cursor += GAP;
+  });
+  const W = Math.max(cursor - GAP + 8, 80), H = TOP + maxd * DY + LH / 2 + (o.notes ? 46 : 14);
+  const Y = d => TOP + d * DY;
+  let edges = '', nodes = '';
+  P.forEach((p, n) => {
+    if (!n.kids) return;
+    n.kids.forEach((k, i) => {
+      const q = P.get(k), x1 = p.x, y1 = Y(p.d), x2 = q.x, y2 = Y(q.d);
+      edges += `<line class="ed" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+      const tx = x1 + (x2 - x1) * 0.42 + (i ? 10 : -10), ty = y1 + (y2 - y1) * 0.42;
+      edges += `<text class="eb" x="${tx}" y="${ty}">${i}</text>`;
+    });
+  });
+  trees.forEach((t, ti) => {
+    (function rec(n) {
+      const p = P.get(n), x = p.x, y = Y(p.d);
+      const isRoot = p.d === 0;
+      const cls = ['nb'];
+      if (o.click && isRoot) cls.push('click');
+      if (o.sel === ti && isRoot) cls.push('sel');
+      if (o.fresh === n) cls.push('fresh');
+      const attrs = o.click && isRoot ? ` data-i="${ti}" tabindex="0" role="button" aria-label="Tree with frequency ${n.f}, leaves ${leaves(n).map(l => l.sym).join(' ')}"` : '';
+      let g = '';
+      if (!n.kids) {
+        g += `<rect class="lf" x="${x - LWD / 2}" y="${y - LH / 2}" width="${LWD}" height="${LH}" rx="8"/>`;
+        g += `<text class="lf-s" x="${x}" y="${y - 6}">${n.sym}</text><text class="lf-f" x="${x}" y="${y + 13}">${n.f}</text>`;
+        if (o.notes) { const nt = o.notes(n); if (nt) nt.forEach((s, i) => { g += `<text class="${i ? 'n2' : 'n1'}" x="${x}" y="${y + LH / 2 + 15 + i * 15}">${s}</text>`; }); }
+      } else {
+        g += `<circle class="in" cx="${x}" cy="${y}" r="${R}"/>`;
+        const s = o.inText ? o.inText(n) : null;
+        if (s !== null && s !== undefined) g += `<text class="in-t" x="${x}" y="${y}">${s}</text>`;
+      }
+      nodes += `<g class="${cls.join(' ')}"${attrs}>${g}</g>`;
+      if (n.kids) n.kids.forEach(rec);
+    })(t);
+  });
+  const w = o.width || Math.round(W * (o.scale || 1.2));
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${w}px;height:auto;margin:0 auto;display:block" role="img" aria-label="${o.label || 'Code tree'}">${edges}${nodes}</svg>`;
+}
+
+/* ---------- state ---------- */
+const TABS = ['Cost of a tree', 'Merge view', 'Merge game'];
+const METHODS = [
+  'Two different trees for the same four symbols, A 8, B 4, C 2 and D 2 (frequencies). For each tree you work out the cost in two ways: from the leaves, and from the internal nodes.',
+  'Build a tree from the bottom, one merge at a time. At the start every symbol is a tree with a single leaf. Each merge puts two trees under a new internal node, and the frequency of the new node is added to the cost so far.',
+  'Your turn. Click the top nodes of two trees to merge them. The frequency of the new node is added to the cost so far. When one tree is left, its cost is the final total. Try to make it as low as you can.',
+];
+const COST_STEPS = [
+  { t: TA, view: 'leaves', name: 'First tree, from the leaves', label: 'Leaves 1' },
+  { t: TA, view: 'nodes', name: 'First tree, from the internal nodes', label: 'Nodes 1' },
+  { t: TB, view: 'leaves', name: 'A different tree, from the leaves', label: 'Leaves 2' },
+  { t: TB, view: 'nodes', name: 'A different tree, from the internal nodes', label: 'Nodes 2' },
+];
+const MERGE_RUNS = ORDERS.map(od => runMerges(ITEMS1, od.seq));
+const ui = { tab: 0, idx: { c: 0, m0: 0, m1: 0 }, seen: { c: 0, m0: 0, m1: 0 }, rev: [false, false, false, false], order: 0 };
+const G = { key: 'd1', forest: [], terms: [], hist: [], sel: null, showMin: false, att: { d1: [], d2: [], d3: [] }, recorded: false };
+
+const terms = a => a.join(' + ');
+const treeName = t => (t.kids ? `the tree with leaves ${leaves(t).map(l => l.sym).join(', ')}` : `leaf ${t.sym}`);
+const treeNameC = t => { const s = treeName(t); return s[0].toUpperCase() + s.slice(1); };
+
+/* ---------- tab 1: cost of a tree ---------- */
+function costView() {
+  const i = ui.idx.c, S = COST_STEPS[i], rev = ui.rev[i], t = S.t, c = codes(t), ls = leaves(t);
+  const cl = costLeaves(t), nodesF = post(t).map(n => n.f), prev = i === 3 ? costLeaves(TB) : costLeaves(TA);
+  const leavesView = S.view === 'leaves';
+  const svg = forestSVG([t], {
+    label: 'Code tree for A 8, B 4, C 2, D 2',
+    inText: !leavesView && rev ? n => String(n.f) : null,
+    notes: leavesView && rev ? l => [c[l.sym], `${l.f}×${c[l.sym].length}=${l.f * c[l.sym].length}`] : null,
+  });
+  let cap, tot = '';
+  const intro = i < 2 ? '' : '<b>A different tree</b> for the same symbols and frequencies. ';
+  if (leavesView) {
+    cap = rev
+      ? `<b>Step ${i + 1} of 4.</b> Code words and depths now show under the leaves. The cost is the sum of frequency × depth over the four symbols: ${ls.map(l => `${l.f}×${c[l.sym].length}`).join(' + ')} = ${cl}. The encoded file has the same length, ${cl} bits.` + (i === 2 ? ` This tree costs ${cl} bits, less than the ${costLeaves(TA)} of the first tree.` : '')
+      : `<b>Step ${i + 1} of 4.</b> ${intro}Each leaf shows its symbol and its frequency. The code word of a leaf is the path from the root: 0 for a step left, 1 for a step right. The cost of the tree is the sum, over the four symbols, of frequency × depth.`;
+    if (rev) tot = `Cost from the leaves = <span class="sum">${ls.map(l => `${l.f}·${c[l.sym].length}`).join(' + ')} = ${ls.map(l => l.f * c[l.sym].length).join(' + ')} = ${cl}</span>`;
+  } else {
+    cap = rev
+      ? `<b>Step ${i + 1} of 4.</b> The internal nodes have frequencies ${nodesF.slice(0, -1).join(', ')} and ${nodesF[nodesF.length - 1]}, the last being the root. Their sum is ${costNodes(t)}, the same number as the cost from the leaves.`
+      : `<b>Step ${i + 1} of 4.</b> The same tree again. Every internal node, the root included, has a frequency: the sum of the frequencies of the leaves below it. Add up the frequencies of all the internal nodes.`;
+    if (rev) tot = `Cost from the internal nodes = <span class="sum">${terms(nodesF)} = ${costNodes(t)}</span>`;
+  }
+  // side table
+  let side = '', title;
+  if (leavesView) {
+    title = 'Symbols';
+    side = `<table class="logt"><tr><th>Symbol</th><th>Frequency</th><th>Code word</th><th>Depth</th><th>Freq × depth</th></tr>` +
+      ls.map(l => `<tr><td class="m">${l.sym}</td><td class="m">${l.f}</td><td class="m ${rev ? '' : 'q'}">${rev ? c[l.sym] : '?'}</td><td class="m ${rev ? '' : 'q'}">${rev ? c[l.sym].length : '?'}</td><td class="m ${rev ? '' : 'q'}">${rev ? l.f * c[l.sym].length : '?'}</td></tr>`).join('') +
+      `<tr class="sum"><td colspan="4">Cost</td><td class="m ${rev ? '' : 'q'}">${rev ? cl : '?'}</td></tr></table>`;
+  } else {
+    title = 'Internal nodes';
+    side = `<table class="logt"><tr><th>Node</th><th>Leaves below it</th><th>Frequency</th></tr>` +
+      post(t).map((n, k, a) => `<tr><td class="m">${k === a.length - 1 ? 'root' : 'node ' + (k + 1)}</td><td class="m">${leaves(n).map(l => l.sym).join(' ')}</td><td class="m ${rev ? '' : 'q'}">${rev ? n.f : '?'}</td></tr>`).join('') +
+      `<tr class="sum"><td colspan="2">Sum</td><td class="m ${rev ? '' : 'q'}">${rev ? costNodes(t) : '?'}</td></tr></table>`;
+  }
+  return { n: COST_STEPS.length, name: S.name, no: `Step ${i + 1} of 4`, chips: [['Symbols', 4], ['Total frequency', 16]], svg, cap, tot, totDone: rev, side, title, check: true, rev, legendNodes: true, fileHTML: fileStripHTML(t, leavesView ? rev : true) };
+}
+
+/* ---------- tab 2: merge view ---------- */
+function mergeView() {
+  const r = ui.order, i = ui.idx['m' + r], run = MERGE_RUNS[r], st = run[i], N = run.length;
+  const svg = forestSVG(st.forest, { label: 'Trees after this step', fresh: st.fresh, inText: n => String(n.f) });
+  let cap, tot = '', done = false;
+  if (i === 0) {
+    cap = `<b>Start.</b> ${st.forest.length} trees, each a single leaf. The cost so far is 0. Each merge puts two trees under a new internal node and adds the frequency of that new node to the cost.`;
+  } else {
+    const [a, b] = st.pair;
+    cap = `<b>Merge ${i}.</b> ${treeNameC(a)} (frequency ${a.f}) and ${treeName(b)} (frequency ${b.f}) go under a new node of frequency ${st.fresh.f}. That frequency is added to the cost: cost so far = ${terms(st.terms)} = ${st.cost}.`;
+    tot = `Cost so far = <span class="sum">${terms(st.terms)} = ${st.cost}</span>`;
+  }
+  if (i === N - 1) {
+    const T = st.forest[0], c = codes(T), ls = leaves(T);
+    done = true;
+    cap += ` One tree is left. Its cost is ${st.cost}. Checking from the leaves, frequency × depth: ${ls.map(l => `${l.f}×${c[l.sym].length}`).join(' + ')} = ${costLeaves(T)}, the same number.`;
+    tot = `Cost = <span class="sum">${terms(st.terms)} = ${st.cost}</span>`;
+  }
+  const rows = run.slice(1, i + 1).map((s, k) => `<tr class="${k + 1 === i ? 'now' : ''}"><td>${k + 1}</td><td class="m">${s.pair[0].key} + ${s.pair[1].key}</td><td class="m">${s.fresh.f}</td><td class="m">${s.cost}</td></tr>`).join('');
+  const side = i === 0 ? `<p class="empty">No merges yet.</p>` : `<table class="logt"><tr><th>#</th><th>Merged trees</th><th>New node</th><th>Cost so far</th></tr>${rows}</table>`;
+  return { n: N, name: i === 0 ? 'Start' : `Merge ${i}`, no: `${ORDERS[r].name} · step ${i + 1} of ${N}`, chips: [['Trees left', st.forest.length], ['Cost so far', st.cost]], svg, cap, tot, totDone: done, side, title: 'Merges', check: false, legendNodes: true, fresh: i > 0, fileHTML: fileStripHTML(done ? st.forest[0] : null, done) };
+}
+
+/* ---------- game ---------- */
+function gameReset() {
+  G.forest = DATA[G.key].items.map(([s, f]) => leaf(s, f)); G.terms = []; G.hist = []; G.sel = null; G.showMin = false; G.recorded = false;
+}
+function gameDone() { return G.forest.length === 1; }
+function gameClick(i) {
+  if (gameDone()) return;
+  if (G.sel === null) { G.sel = i; }
+  else if (G.sel === i) { G.sel = null; }
+  else {
+    const a = G.forest[G.sel], b = G.forest[i], m = b.f < a.f ? join(b, a) : join(a, b);
+    G.hist.push({ forest: G.forest.slice(), terms: G.terms.slice(), pair: [a, b], m, recorded: G.recorded });
+    const lo = Math.min(G.sel, i), hi = Math.max(G.sel, i);
+    const nf = G.forest.filter((_, k) => k !== hi); nf[lo] = m;
+    G.forest = nf; G.terms = [...G.terms, m.f]; G.sel = null; G.last = { a, b, m };
+    if (gameDone()) { G.recorded = true; G.att[G.key].push({ cost: costNodes(G.forest[0]), seq: G.hist.map(h => h.pair[0].key + '+' + h.pair[1].key).join(', ') }); }
+  }
+  renderGame();
+}
+function gameUndo() {
+  if (!G.hist.length) { G.sel = null; renderGame(); return; }
+  if (gameDone()) G.att[G.key].pop();
+  const h = G.hist.pop(); G.forest = h.forest; G.terms = h.terms; G.sel = null; G.showMin = false; G.recorded = false; G.last = null; renderGame();
+}
+function renderGame() {
+  const D = DATA[G.key], items = D.items, nT = G.forest.length, done = gameDone();
+  $('gno').textContent = D.label; $('gname').textContent = freqLine(items);
+  $('gchips').innerHTML = `<span class="chip">Trees left <b>${nT}</b></span><span class="chip">Cost so far <b>${G.terms.reduce((s, x) => s + x, 0)}</b></span>`;
+  $('ggraph').innerHTML = forestSVG(G.forest, { click: true, sel: G.sel, inText: n => String(n.f), label: 'Trees in the merge game', fresh: G.last && G.hist.length ? G.last.m : null, scale: 1.1 });
+  const cost = G.terms.reduce((s, x) => s + x, 0);
+  const tot = $('gtotal');
+  tot.hidden = !G.terms.length; tot.classList.toggle('done', done);
+  tot.innerHTML = G.terms.length ? `${done ? 'Cost' : 'Cost so far'} = <span class="sum">${terms(G.terms)} = ${cost}</span>` : '';
+  let cap;
+  if (done) cap = `<b>One tree is left.</b> Its cost is ${cost}. Use Restart to try again with a different order of merges, or switch data set.`;
+  else if (G.sel !== null) { const s = G.forest[G.sel]; cap = `<b>Selected:</b> ${treeName(s)}, frequency ${s.f}. Click a second tree to merge it with this one, or click the same tree again to unselect it.`; }
+  else if (G.last && G.hist.length) { const { a, b, m } = G.last; cap = `<b>Merge ${G.hist.length}.</b> ${treeNameC(a)} (${a.f}) and ${treeName(b)} (${b.f}) now sit under a new node of frequency ${m.f}. Cost so far = ${terms(G.terms)} = ${cost}. Pick the next two trees.`; }
+  else cap = `<b>Start.</b> Pick any two trees by clicking their top nodes. They are merged under a new node, and the frequency of that node is added to the cost.`;
+  $('gcaption').innerHTML = cap;
+  $('glog').innerHTML = G.hist.length
+    ? `<table class="logt"><tr><th>#</th><th>Merged trees</th><th>New node</th><th>Cost so far</th></tr>${G.hist.map((h, k) => `<tr class="${k + 1 === G.hist.length ? 'now' : ''}"><td>${k + 1}</td><td class="m">${h.pair[0].key} + ${h.pair[1].key}</td><td class="m">${h.m.f}</td><td class="m">${G.terms.slice(0, k + 1).reduce((s, x) => s + x, 0)}</td></tr>`).join('')}</table>` : '<p class="empty">No merges yet.</p>';
+  $('gres').hidden = !done;
+  if (done) {
+    const T = G.forest[0], c = codes(T), ls = leaves(T).slice().sort((x, y) => x.sym < y.sym ? -1 : 1);
+    const bits = Math.ceil(Math.log2(items.length));
+    $('gresBody').innerHTML = `<table class="logt"><tr><th>Symbol</th><th>Frequency</th><th>Code word</th><th>Length</th><th>Freq × length</th></tr>` +
+      ls.map(l => `<tr><td class="m">${l.sym}</td><td class="m">${l.f}</td><td class="m">${c[l.sym]}</td><td class="m">${c[l.sym].length}</td><td class="m">${l.f * c[l.sym].length}</td></tr>`).join('') +
+      `<tr class="sum"><td colspan="4">Cost, from the leaves</td><td class="m">${costLeaves(T)}</td></tr></table>` +
+      `<p class="note" style="margin:10px 0 0">The cost from the merges is ${cost}, the same number. For comparison, giving every symbol a code word of ${bits} bits would cost ${fixedCost(items)}.</p>`;
+    $('togMin').setAttribute('aria-pressed', G.showMin);
+    const mo = $('minOut'); mo.hidden = !G.showMin;
+    if (G.showMin) { const m = minCost(items.map(x => x[1])); mo.innerHTML = `Lowest cost possible for this data set: <b>${m}</b>. Your tree: <b>${cost}</b>${cost === m ? ', which reaches it.' : `, which is ${cost - m} above it.`}`; }
+  }
+  const at = G.att[G.key];
+  $('gatt').hidden = !at.length;
+  $('gattBody').innerHTML = `<ul class="att">${at.map((a, k) => `<li><span>#${k + 1} · ${a.seq}</span><b>${a.cost}</b></li>`).join('')}</ul><p class="note" style="margin:10px 0 0">Lowest so far: <b>${Math.min(...at.map(a => a.cost))}</b></p>`;
+  $('gundo').disabled = !G.hist.length && G.sel === null;
+}
+
+/* ---------- shell ---------- */
+function viewId() { return ui.tab === 0 ? 'c' : 'm' + ui.order; }
+function thumbFor(id, k) {
+  if (id === 'c') { const S = COST_STEPS[k], c = codes(S.t), lv = S.view === 'leaves'; return forestSVG([S.t], { label: 'Earlier step', inText: lv ? null : n => String(n.f), notes: lv ? l => [c[l.sym], `${l.f}×${c[l.sym].length}=${l.f * c[l.sym].length}`] : null, width: 170 }); }
+  const st = MERGE_RUNS[+id[1]][k]; return forestSVG(st.forest, { label: 'Earlier step', fresh: st.fresh, inText: n => String(n.f), width: 170 });
+}
+function renderStep() {
+  const id = viewId(), V = ui.tab === 0 ? costView() : mergeView(), i = ui.idx[id];
+  $('stepno').textContent = V.no; $('stepname').textContent = V.name;
+  $('chips').innerHTML = V.chips.map(([a, b]) => `<span class="chip">${a} <b>${b}</b></span>`).join('');
+  $('fileRow').hidden = false; $('fileRow').innerHTML = V.fileHTML;
+  $('graph').innerHTML = V.svg;
+  $('legend').innerHTML = `<span class="lg"><span class="lgl"></span>leaf: symbol and frequency</span><span class="lg"><span class="lgc"></span>internal node</span>` + (V.fresh ? `<span class="lg"><span class="lgn"></span>new node</span>` : '') + `<span class="lg">0 / 1 on a line: step left / right</span>`;
+  const tot = $('total'); tot.hidden = !V.tot; tot.classList.toggle('done', !!V.totDone); tot.innerHTML = V.tot || '';
+  $('caption').innerHTML = V.cap;
+  $('checkRow').hidden = !V.check; $('togCheck').setAttribute('aria-pressed', !!V.rev);
+  $('sideTitle').textContent = V.title; $('sideBody').innerHTML = V.side;
+  $('back').disabled = i === 0; $('next').disabled = i === V.n - 1;
+  $('progress').innerHTML = Array.from({ length: V.n }, (_, k) => `<i class="${k <= i ? 'done' : ''}"></i>`).join('');
+  let strip = '';
+  for (let k = 0; k <= ui.seen[id]; k++) {
+    const lab = id === 'c' ? COST_STEPS[k].label : (k === 0 ? 'Start' : 'Merge ' + k);
+    strip += `<button class="thumb ${k === i ? 'on' : ''}" data-k="${k}" type="button">${thumbFor(id, k)}<span>${lab}</span></button>`;
+  }
+  $('strip').innerHTML = strip;
+  const on = $('strip').querySelector('.on');
+  if (on) $('strip').scrollLeft = on.offsetLeft - $('strip').clientWidth / 2 + on.offsetWidth / 2;
+}
+function render() {
+  document.querySelectorAll('#tabs .tab').forEach((b, k) => b.setAttribute('aria-selected', k === ui.tab));
+  $('method').textContent = METHODS[ui.tab];
+  const o = $('opts');
+  if (ui.tab === 1) { o.hidden = false; o.innerHTML = `<span class="lab">Merge order</span>` + ORDERS.map((od, k) => `<button class="opt" type="button" data-o="${k}" aria-pressed="${k === ui.order}">${od.name}</button>`).join(''); }
+  else if (ui.tab === 2) { o.hidden = false; o.innerHTML = `<span class="lab">Data set</span>` + Object.keys(DATA).map(k => `<button class="opt" type="button" data-d="${k}" aria-pressed="${k === G.key}">${DATA[k].label}: ${freqLine(DATA[k].items)}</button>`).join(''); }
+  else o.hidden = true;
+  const game = ui.tab === 2;
+  $('stepView').hidden = game; $('gameView').hidden = !game; $('histSec').hidden = game;
+  if (game) renderGame(); else renderStep();
+}
+function go(d) {
+  if (ui.tab === 2) return;
+  const id = viewId(), N = ui.tab === 0 ? COST_STEPS.length : MERGE_RUNS[ui.order].length;
+  const j = Math.max(0, Math.min(N - 1, ui.idx[id] + d));
+  ui.idx[id] = j; ui.seen[id] = Math.max(ui.seen[id], j); render();
+}
+$('tabs').innerHTML = TABS.map((s, k) => `<button class="tab" role="tab" type="button" data-s="${k}">${s}</button>`).join('');
+$('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) { ui.tab = +b.dataset.s; render(); } });
+$('opts').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b) return;
+  if (b.dataset.o !== undefined) { ui.order = +b.dataset.o; }
+  if (b.dataset.d !== undefined) { G.key = b.dataset.d; gameReset(); G.last = null; }
+  render();
+});
+$('strip').addEventListener('click', e => { const b = e.target.closest('.thumb'); if (b) { ui.idx[viewId()] = +b.dataset.k; render(); } });
+$('next').addEventListener('click', () => go(1));
+$('back').addEventListener('click', () => go(-1));
+$('reset').addEventListener('click', () => { const id = viewId(); ui.idx[id] = 0; ui.seen[id] = 0; if (id === 'c') ui.rev = [false, false, false, false]; render(); });
+$('togCheck').addEventListener('click', () => { ui.rev[ui.idx.c] = !ui.rev[ui.idx.c]; render(); });
+$('ggraph').addEventListener('click', e => { const g = e.target.closest('[data-i]'); if (g) gameClick(+g.dataset.i); });
+$('ggraph').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { const g = e.target.closest('[data-i]'); if (g) { e.preventDefault(); gameClick(+g.dataset.i); } } });
+$('gundo').addEventListener('click', gameUndo);
+$('greset').addEventListener('click', () => { gameReset(); G.last = null; renderGame(); });
+$('togMin').addEventListener('click', () => { G.showMin = !G.showMin; renderGame(); });
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('button,[role=button]') && (e.key === 'Enter' || e.key === ' ')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+});
+gameReset(); G.last = null;
+render();
+
+})();
+</script>
+
+</body>
+</html>

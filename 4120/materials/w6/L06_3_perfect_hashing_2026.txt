@@ -1,0 +1,295 @@
+• Perfect hashing
+
+        CSC4120 Design and Analysis of Algorithms
+                                                    1
+The problem
+                                                                         say using universal
+ • 𝑁 keys, hash table size 𝑀.                                              hash functions
+
+ • We know that using chaining, the expected time 𝐸[𝑇] for find(𝑥) is
+      𝑁
+   𝑂     = 𝑂 1 if space 𝑀 = Θ(𝑁).
+      𝑀
+ • Can we make the actual time 𝑻 = 𝑶 𝟏 using similar 𝑂 𝑁 space?
+ • Not really! if the set of keys is arbitrary, it is like throwing balls in bins…
+    • Nobody can beat laws of probability.
+ • Hence, we need a special case of the problem.
+ • Let’s understand this more!
+
+
+                             CSC4120 Design and Analysis of Algorithms                         2
+The average tells us little about the worst lookup
+• Hash table with chaining. 𝑇 = cost of one lookup, and 𝐸[𝑇] = 2.
+
+
+
+                                                                           Question: if I only tell you
+                                                                           𝐸 𝑇 = 2, which
+                                                                           distribution do you have?
+
+
+
+
+                               CSC4120 Design and Analysis of Algorithms
+                                                                                                   3
+The max load is predictable with high prob.
+                                          • 10⁶ keys thrown at random into 10⁶ bins: about 92%
+                                            of the bins hold at most 2 keys, and the fullest bin
+                                            holds about 9.
+                                          • In general, the fullest bin holds about 𝑘 keys with 𝑘! ≈
+                                            𝑁/𝑒 (growing like log 𝑁/ log log 𝑁), and with high
+                                            probability within ±1 of that. For example, it is 5, 7,
+                                            8, 9, 10 for 𝑁 = 10³, 10⁴, 10⁵, 10⁶, 10⁷ (median of 20
+                                            simulations).
+                                          • This is still not a guarantee: for a given ℎ, all 𝑁 keys
+                                            could land in one bin. It is improbable (probability
+                                            𝑁 − 𝑁−1 for fully random placement), but it is not
+                                            impossible.
+                                          • Nothing here says "every lookup takes at most 𝑘
+                                            steps".
+
+
+                     CSC4120 Design and Analysis of Algorithms
+                                                                                              4
+Can we ever get a hard guarantee?
+                                                       • Idea: the keys are fixed. Look at
+                                                         them first, choose a hash function
+                                                         for this set, and check that it works.
+                                                       • Randomness does not disappear. It
+                                                         moves from lookup time to build
+                                                         time: draw ℎ, test it, retry if it fails.
+                                                         After that, no probability is left in
+                                                         any lookup.
+                                                       • First step (the pre-session): with 𝑁²
+                                                         slots it is easy, and the proof is an
+                                                         averaging argument. The lecture
+                                                         asks how to do it with only 𝑂(𝑁)
+                                                         slots.
+
+                  CSC4120 Design and Analysis of Algorithms
+                                                                                            5
+Solve the set membership problem
+• Assume the set 𝑆 of 𝑁 keys is fixed.                                    for this specific
+• Given any key 𝑥, answer in 𝑂(1) time if 𝑥 ∈ 𝑆.                            set of keys!
+
+   • Same as making sure that if we use a hash table, all chain lengths are at most
+     a fixed number, say one.
+• How to “take out” the random length in chain formation?
+
+
+
+
+                              CSC4120 Design and Analysis of Algorithms                       6
+                                          2
+ Can I do have no collisions using space 𝑁 ?                                   lots of space!
+
+
+• Given 𝑁 keys, can we construct a hash table of size 𝑀 = 𝑁 2 with no collisions?
+• Yes! by finding the right hash function from a set 𝐻 of universal hash functions.
+                                                                                   1
+• Claim: Pick aτ random a hash function ℎ. The chance of no collisions is > .
+                                                                                   2
+• Try different ones until no collision! We prove that on the average we need 2 trials!
+
+                             𝑥1
+                                         no collision: no bin
+       {𝑥1 , 𝑥2 , … , 𝑥𝑁 }               has more than 1 key
+                             𝑥7
+                      ℎ      𝑥4
+                             𝑥8
+ try different ℎ
+ until no collision
+                             𝑥11
+                             𝑥2
+
+
+                                   CSC4120 Design and Analysis of Algorithms                7
+Indicator variables for collisions
+• 𝐶𝑥𝑦 ∈ {0,1} = 1ℎ 𝑥 =ℎ(𝑦) : indicator rv for collision of 𝑥, 𝑦 using ℎ: going to same bin.
+• 𝑥, 𝑦 ∈ {1, … , 𝑁} = set of keys.
+• Example: 4 keys 1,2,3,4.
+                                                                                      1    0     0    0
+                            𝑦                                       𝑛0 = 0         𝐶11 , 𝐶12 , 𝐶13 , 𝐶14
+                                                               1    𝑛1 = 1                 1, 𝐶 𝐶1
+    𝐶11 , 𝐶12 , 𝐶13 , 𝐶14                                           𝑛2 = 0
+                                                                                   𝐶21 , 𝐶22    23, 24
+                                                                                                 1𝐶
+                                                                                   𝐶31 , 𝐶32 , 𝐶33,
+    𝐶21 , 𝐶22 , 𝐶23, 𝐶24         {1,2,3,4} ՜
+                                            ℎ                          …
+                                                                                           1
+                                                                                                      34
+                                                                                                      1
+                                                              2,4 𝑛4 = 2           𝐶41 , 𝐶42 , 𝐶43, 𝐶44
+    𝐶31 , 𝐶32 , 𝐶33, 𝐶34                                          𝑛5 = 0
+                                                                       …
+    𝐶41 , 𝐶42 , 𝐶43, 𝐶44                                       3     𝑛7 = 1      Notice: σ𝑥𝑦 𝐶𝑥𝑦 = 6
+𝑥
+                                                                                 Also σ𝑖 𝑛𝑖2 = 12 + 22 + 12 = 6
+
+
+
+
+                                     CSC4120 Design and Analysis of Algorithms
+                                                                                                                  8
+Indicator variables for collisions
+• 𝐶𝑥𝑦 ∈ {0,1} = 1ℎ 𝑥 =ℎ(𝑦) : indicator rv for collision of 𝑥, 𝑦 using ℎ: going to same bin.
+• 𝑥, 𝑦 ∈ {1, … , 𝑁} = set of keys, 𝑃ℎ 𝐶𝑥𝑦≠𝑥 = 1 = 1/𝑚
+
+      𝑁(𝑁 − 1)/2
+                   𝐶𝑥𝑦≠𝑥
+  𝐶11 , 𝐶12 , 𝐶13 , 𝐶14 , … , 𝐶1𝑁     Have collision: one or more 𝐶𝑥𝑦≠𝑥 = 1.
+  𝐶21 , 𝐶22 , 𝐶23, 𝐶24 , … , 𝐶2𝑁                       𝑃ℎ 𝐶𝑥𝑦≠𝑥 = 1 = 1/𝑚
+  𝐶31 , 𝐶32 , 𝐶33, 𝐶34                 𝑃ℎ ℎ𝑎𝑣𝑒 𝑐𝑜𝑙𝑙𝑖𝑠𝑖𝑜𝑛𝑠 = 𝑃ℎ 𝐶12 = 1 ∪ 𝐶13 = 1 ∪ ⋯
+  𝐶41 , 𝐶42 , 𝐶43, 𝐶44 , … , 𝐶4𝑁                                                𝑁 𝑁−1 1
+                                      ≤ sum of these probabilities =
+                   …                                                              2   𝑚
+  𝐶𝑁1 , 𝐶𝑁2 , 𝐶𝑁3, … 𝐶𝑁𝑁
+                                      No collision: all 𝐶𝑥𝑦≠𝑥 = 0
+                                           𝑃ℎ 𝑛𝑜 𝑐𝑜𝑙𝑙𝑖𝑠𝑜𝑛 = 1 − 𝑃ℎ ℎ𝑎𝑣𝑒 𝑐𝑜𝑙𝑙𝑖𝑠𝑖𝑜𝑛
+
+                                    CSC4120 Design and Analysis of Algorithms
+                                                                                              9
+Proof
+                                                                                                                  1
+• Claim: Pick at random a hash function ℎ. The chance of no collisions is > .
+                                                                                                                  2
+• Proof: Let 𝐶𝑥𝑦 = 1ℎ 𝑥 =ℎ(𝑦) .
+                                    1          1
+• Note that 𝑃ℎ 𝐶𝑥𝑦≠𝑥 = 1 ≤              =           .
+                                    𝑀         𝑁2
+             𝑁     𝑁 𝑁−1
+• There are      =        variables 𝐶𝑥𝑦≠𝑥 .   % see previous slide
+             2        2
+                                                                   at least one
+• 𝑃ℎ [ℎ𝑎𝑣𝑒 𝑐𝑜𝑙𝑙𝑖𝑠𝑖𝑜𝑛] = 𝑃ℎ [𝐶𝑥𝑦 = 1 ∪ 𝐶𝑥𝑧 = 1 ∪ 𝐶𝑥𝑠 = 1 ∪ ⋯ ] % variable is 1
+     𝑁     1       𝑁(𝑁−1) 1    1
+   ≤           =              < .                  union bound: 𝑃 𝐴 ∪ 𝐵 ≤ 𝑃 𝐴 + 𝑃(𝐵)
+     2    𝑁2         2   𝑁2    2
+                                         1
+• Hence, prob of no collisions > .
+                                         2                                 𝐶23 = 1                   𝑁 = 3.
+                                                                                       𝐶12 = 1       𝑃 𝑐𝑜𝑙𝑙𝑖𝑠𝑖𝑜𝑛 =
+                                                                                                     𝑃[𝐶12 = 1 ∪ 𝐶13 = 1 ∪ 𝐶23 = 1]
+                                                                                                      ≤ 𝑃 𝐶12 = 1 + 𝑃 𝐶13 = 1
+                                                                                     𝐶13 = 1
+                                        CSC4120 Design and Analysis of Algorithms                𝐻      +𝑃 𝐶23 = 1
+                                                                                                                         10
+Can I do it using space 𝑂 𝑁 ?
+• Use a tree of hash tables of depth 2: no collision in level 2
+                                                   ℎ2 hashes the 𝑛2 keys to a
+                                                       level 2 hash table
+                                                                                       Since I use 𝑛22 space, I can pick
+                                                     𝑠𝑖𝑧𝑒 = 16                            ℎ2 𝑠. 𝑡. second level hash
+           𝑛𝑖 collisions
+                               1   =4        ℎ2            𝑥7     𝑛22 space
+           in bucket 𝑖                                     𝑥13                              table is collision-free!
+                               2   𝑛2 keys
+                               3                                                       use result from previous slide
+                                             ℎ5                     𝑛52
+ {𝑥1 , 𝑥2 , … , 𝑥𝑁 }           5   𝑛5
+                                               ℎ7                          𝑛72
+                                   𝑛7
+                ℎ                  𝑛8                 ℎ8
+                                                                          𝑛82
+                                               ℎ11
+                                   𝑛11                                 2
+                                                                      𝑛11
+                           𝛮       𝑛12
+                                             ℎ12                    2
+                                                                   𝑛12
+
+
+                                               CSC4120 Design and Analysis of Algorithms
+                                                                                                                           11
+Using space 𝑂(𝑁)
+• Use a tree of hash tables of depth 2 with no collisions in level 2.
+
+                        1
+                                      ℎ2          𝑥7      𝑛22
+                                                                       extra space
+                        2
+                        3
+                            𝑛2 keys               𝑥13
+                                                                       σ𝑖 𝑛𝑖2 ≜ 𝐴
+                                      ℎ5                     𝑛52
+  {𝑥1 , 𝑥2 , … , 𝑥𝑁 }   5   𝑛5
+                                        ℎ7                          𝑛72
+                            𝑛7                                                 We prove that 𝐸 𝐴 = 2𝑁.
+                ℎ           𝑛8               ℎ8
+                                                                   𝑛82         Then, using Markov’s inequality,
+                                        ℎ11                                                  1
+                            𝑛11                                  2
+                                                                𝑛11            𝑃ℎ 𝐴 > 4𝑁 ≤
+                        𝛮   𝑛12                                                                2
+Alg: keep changing                                                                                 1
+ℎ until extra space                   ℎ12                   2
+                                                           𝑛12                 ⇔ 𝑃ℎ 𝐴 ≤ 4𝑁 >
+                                                                                                     2
+   σ𝑖 𝑛𝑖2 ≤ 4𝑁                                                                 It will take 2 tries of ℎ on average to
+                                                                               get total space ≤ 5𝑁.
+
+                                        CSC4120 Design and Analysis of Algorithms
+                                                                                                                12
+                                                                                                                             𝑛2 keys
+Lemma                                                                                          𝑎 𝑏 𝑐             𝑑
+                                                                                                                             𝑛5
+                                                                                              𝐶𝑎𝑎 𝐶𝑏𝑎
+• σ𝑖 𝑛𝑖2 = σ𝑥 σ𝑦 𝐶𝑥𝑦 .                                                                        𝐶𝑎𝑏 𝐶𝑏𝑏                        𝑛7
+                                                                                              𝐶𝑎𝑐 𝐶𝑏𝑐                        𝑛8
+• Proof: σ𝑥 σ𝑦 𝐶𝑥𝑦 = σ𝑖[σ𝑥∈𝐵𝑖 σ𝑦∈𝐵𝑖 𝐶𝑥𝑦 ] = σ𝑖 𝑛𝑖2 .
+                                                                                                                             𝑛11
+                                                                                                                             𝑛12
+                                                                                 𝐶𝑎𝑏 = 1, 𝐶𝑎𝑔 = 0
+         single bin case              two bin case
+                                                            𝐵𝑖         𝑆𝑖
+                                                                          𝑏                  𝐵𝑗       𝑔 𝑒 𝑆𝑗
+ bin 𝑖
+                     𝐵𝑖 = 𝑎, 𝑏, 𝑐 ,                                     𝑎 𝑐
+           𝑏      σ𝑥∈𝐵𝑖 σ𝑦∈𝐵𝑖 𝐶𝑥𝑦 =                                                                    𝑑 𝑓
+         𝑎 𝑐                                                           𝑛𝑖 = 3                          𝑛𝑗 = 4
+                  𝐶𝑎𝑎 + 𝐶𝑎𝑏 + 𝐶𝑎𝑐 +
+                                                                       𝑛𝑖2 = 9                        𝑛𝑗2 = 16
+                  𝐶𝑏𝑎 + 𝐶𝑏𝑏 + 𝐶𝑏𝑐 +
+                  𝐶𝑐𝑎 + 𝐶𝑐𝑏 + 𝐶𝑐𝑐                         ෍          ෍        𝐶𝑥𝑦 = 9          ෍           ෍          𝐶𝑥𝑦 = 16
+                          = 9                          𝑥∈{𝑎,𝑏,𝑐} 𝑦∈{𝑎,𝑏,𝑐}                  𝑥∈{𝑔,𝑒,𝑑,𝑓} 𝑦∈{𝑔,𝑒,𝑑,𝑓}
+                           𝐶𝑥𝑦 = 0 if 𝑥, 𝑦 in
+                            different bins.                 σ𝑥 σ𝑦 𝐶𝑥𝑦
+                                                             = σ𝑥∈𝐵𝑖 σ𝑦∈𝐵𝑖 𝐶𝑥𝑦 + σ𝑥∈𝐵𝑗 σ𝑦∈𝐵𝑗 𝐶𝑥𝑦 = 𝑛𝑖2 + 𝑛𝑗2
+                                                CSC4120 Design and Analysis of Algorithms
+                                                                                                                                   13
+                                          1
+Proof of 𝑃ℎ σ𝑖 𝑛𝑖2 ≤ 4𝑁             >
+                                          2
+• σ𝑖 𝑛𝑖2 = σ𝑥 σ𝑦 𝐶𝑥𝑦 .           % using the previous Proposition
+⇒ 𝐸ℎ [σ𝑖 𝑛𝑖2 ] = 𝐸ℎ [σ𝑥 σ𝑦 𝐶𝑥𝑦 ]
+         = 𝑁 + 𝐸ℎ [σ𝑥 σ𝑦≠𝑥 𝐶𝑥𝑦 ] % since 𝐶𝑥𝑥 = 1
+        = 𝑁 + σ𝑥 σ𝑦≠𝑥 𝐸ℎ [𝐶𝑥𝑦 ] % using linearity of expectation
+                          1
+        ≤ 𝑁 + σ𝑥 σ𝑦≠𝑥 𝑀                % since ℎ is universal
+                              1
+        =𝑁+𝑁 𝑁−1 𝑀                  < 2𝑁.
+                              =𝑁
+                              2         𝐸ℎ σ𝑖 𝑛𝑖2                               2𝑁   1
+• Markov inequality: Prℎ [σ𝑖 𝑛𝑖 ] ≥ 4𝑁 ≤ 4𝑁                                 < 4𝑁 = 2.
+
+            Markov inequality:
+                         𝐸[𝑋]
+            Pr 𝑋 > 𝑎 ≤          .
+                          𝑎         CSC4120 Design and Analysis of Algorithms
+                                                                                         14
+Conclusions
+• We constructed a “static” data structure for checking membership for a
+  given set of keys.
+• There are generalizations we did not cover.
+    • Easy generalization when new keys are inserted in the set
+    • In this case we may need to rehash in the case of collisions in the first
+      hash table.
+    • But the amortized cost per operation is still O(1).
+
+
+
+
+                               CSC4120 Design and Analysis of Algorithms
+                                                                              15
+

@@ -2,7 +2,10 @@ Review.setup({
   key: "csc3150-v3",
   code: "CSC3150",
   name: "操作系统",
-  other: { href: "../4010/", label: "CSC4010" },
+  other: [
+    { href: "../4120/", label: "CSC4120" },
+    { href: "../4010/", label: "CSC4010" }
+  ],
   exam: {
     start: "2026-11-05T10:30:00+08:00",
     when: "11 月 5 日（周四）10:30–12:00 笔试",

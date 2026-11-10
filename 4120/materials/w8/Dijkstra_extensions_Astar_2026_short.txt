@@ -1,0 +1,400 @@
+• Shortest paths: III
+  • Extensions to Dijkstra’s algorithm
+  • A*
+             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                           1
+Objective
+• Dijkstra’s algorithm explores shortest paths to all nodes.
+• Focus on finding the shortest path to a particular destination.
+• Use heuristics to make our search more efficient.
+• Read (if you have plenty of free time) “Speed-Up Techniques for
+  Shortest-Path Computations”, by Dorothea Wagner and Thomas
+  Willhalm
+• https://www.youtube.com/watch?v=cSxnOm5aceA.
+• For A* play with: https://qiao.github.io/PathFinding.js/visual/.
+
+
+                      CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                    2
+Speeding up Dijkstra’s algorithm
+• Most of the searches: single source s to single destination t.
+• Obvious: stop the search when t is removed from 𝑄.
+• Simple model: assume a b-branching structure, all edges of length 1.
+
+ Dijkstra explores all                                                                           dark green: s
+                                                                                                 red: t
+ possible directions                                                                     𝑆
+ in increasing                                 S           d                                 𝑄   green: in set Q, i.e.,
+                                                                                                 partially explored,
+ distance from s                                                       t                         blue: already explored.
+
+
+                                                       b
+                                                            b
+
+
+• To find the shortest path to a node 𝑡 that is at distance 𝑑 away (with one-
+  directional search) we need to visit about 𝑛 = 𝑏 𝑑 nodes.
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                        3
+Bi-directional search
+                                                                        𝑏 𝑑/2 nodes              𝑏 𝑑/2 nodes
+
+
+
+                            d                                                𝑑/2        𝑑/2
+                   s                                                     s                   t
+                                       t
+                        b
+
+
+        Normal Dijkstra explores                      Bidirectional search explores 𝑛𝐵𝐷 =
+        𝑛 = 𝑏 𝑑 nodes                                 2𝑏𝑑/2 = 2 𝑏 𝑑 = 2 𝑛
+                                                                                                   𝑑
+• With bi-directional search we explore two graphs of diameter , hence
+                                                                 2
+  explore about 𝑂( 𝑛) nodes.                    in this specific
+                                                                             type of graph
+                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                               4
+Bi-directional search                                                                                estimated distance
+                                                                                                     in each search.
+Bidirectional search: perform in parallel:
+• Search forward from s with Dijkstra (𝑆𝑠 : decided nodes, keep v.s).
+• Search backwards from t with Dijkstra (𝑆𝑡: decided nodes, keep v.t).
+• Stop when some node u has been placed in both 𝑆𝑠 and 𝑆𝑡.
+• Check for node x in 𝑆𝑠 with minimum value of x.s + x.t.    this node is on
+                                                                                                shortest path s - t.
+
+                                                                                              x.s, x.t
+                                                                  𝑆𝑠                                      𝑆𝑡
+                                                                                                 x
+                                                                    s                     u                      t
+
+
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                          5
+                                                              𝑢 ′ is on shortest
+                                                                 path, not w
+
+
+
+
+CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                             6
+Proof (not in material)
+                                                                        shortest s-t path must use only
+                                                                        nodes in 𝑆𝑠 ∪ 𝑆𝑡
+
+
+
+
+                     in 𝑆𝑠                       in 𝑆𝑡
+
+
+
+
+                                                                    ≤
+
+
+
+
+                             SUTD ISTD 50.004 Intro to Algorithms
+Exercise
+• Run bi-directional Dijkstra to find the shortest path from s to to x.
+
+                                                                10
+                                   1
+                                                                7
+                                                                                         1
+
+
+
+
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                             8
+A* with potential function ℎ(. )
+• Keeps a closed set 𝑆, open set 𝑄, Stop when you bring destination 𝑡 in 𝑆.
+• Priority rule: bring in 𝑆 the node 𝑢𝑛 from 𝑄 that has min [𝑔 𝑢𝑛 + ℎ 𝑢𝑛 ].
+                                                                                           𝑢𝑛 ∈𝑄
+• Relaxations: update 𝑔 . for all successors of 𝑣, including nodes in 𝑆.        priority
+                                                                             function 𝑓(𝑢)
+    • 𝑔(𝑣): shortest distance to 𝑠 through nodes in 𝑆.
+• All the “strictly” updated successors of 𝑣 are put back to 𝑄 even if they were in 𝑆.
+
+
+                                     𝑄 Dijkstra                                                             𝑄       A*
+                  g(𝑢3 )                                                                 g(𝑢3 )
+         g(𝑢1 )                                                                                        𝑢1
+g 𝑠 =0                             g 𝑢𝑛                                          g(𝑢1 )                     g 𝑢𝑛′ , ℎ 𝑢𝑛′
+                     g(𝑢2 )                                    g 𝑠 =0                         g(𝑢2 )
+             𝑢1               𝑢𝑛                                                                            𝑢𝑛′
+                    𝑢2             min [𝑔 𝑢𝑛 ]                                      𝑢1       𝑢2
+                               𝑢𝑛 ∈𝑄                                                                        min [𝑔 𝑢𝑛 + ℎ(𝑢𝑛 )]
+         𝑆        𝑢𝑛                                                                      𝑢𝑛′               𝑢𝑛 ∈𝑄
+                                                                                𝑆
+                                    CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                         9
+                                                                                                  Dijkstra
+ Potential function ℎ 𝑣                                                                               𝑓 𝑣 =𝑔 𝑣
+                                                                                                         s
+• Let ℎ 𝑣 = estimate of future cost to reach 𝑡: min cost 𝑣 → 𝑡.
+                                                                                                                  t
+• Then 𝑓 𝑣 = 𝑔 𝑣 + ℎ 𝑣 = min cost from 𝑠 to reach 𝑡 through 𝒗.
+• We will move along the shortest path, since 𝑓 𝑣 is minimized for 𝑣
+  on shortest 𝑠 → 𝑡 path.
+                                                                                                    𝐴∗
+       min{𝑔 𝑣 + ℎ 𝑣 }                                                                            𝑓 𝑣 = 𝑔 𝑣 + ℎ(𝑣)
+        𝑣
+
+
+
+
+• 𝐴∗ : use ℎ 𝑣 = heuristic that approximates 𝛿 𝑣, 𝑡 .
+
+              ℎ(. ) is a “potential function. It
+            decreases when we get closer to 𝑡.
+                                    CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                             10
+    Things can go wrong
+    • Run 𝐴 ∗ on the following graph and check that it will terminate with the wrong
+      shortest path to 𝑡. Use ℎ = 4,3,1,0 for 𝑠, 𝑢, 𝑣, 𝑡.
+             𝑢 ℎ=3               𝑢 ℎ=3                                     𝑢 ℎ=3                       𝑢 ℎ=3
+       1          1           1 𝑔=1 1                                   1 𝑔=1 1                     1 𝑔=1 1
+                     ℎ=0            ℎ=0                                        ℎ=0                          ℎ=0
+𝑠                      𝑡 𝑠   𝑔=0  𝑔=∞ 𝑡                        𝑠       𝑔=0  𝑔=3  𝑡 𝑠               𝑔=0  𝑔=3   𝑡
+ℎ=4
+       2         1           2    𝑔=2           1                          2     𝑔=2           1    2   𝑔=2    1
+
+             𝑣 ℎ=1                     𝑣 ℎ=1                                           𝑣 ℎ=1             𝑣 ℎ=1
+
+
+    • Can’t happen if ℎ is “admissible”: need ℎ(𝑣) ≤ 𝛿(𝑣, 𝑡).    ℎ 𝑢 = 3 > 𝛿 𝑢, 𝑡 = 1
+
+    • Other issues? nodes may go in and out of 𝑆: no guarantee on termination time.
+      To avoid that, we need ℎ to be “consistent”. Consistency implies admissibility.
+                                 CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                              11
+Desired properties of potential function ℎ(. )
+• New issues to worry about:                                                       correctness
+     a) when the target 𝑡 enters 𝑆, do we have a shortest path?
+     b) nodes in 𝑆 can move back to 𝑄?                              need bound on # of steps
+• If ℎ(. ) satisfies certain properties, then I don’t not have to worry!
+     • Admissible ℎ(. ): when the target 𝑡 enters 𝑆, we have a shortest path.
+        • But no upper bound on max # of steps.
+        • Requires ℎ(𝑣) ≤ 𝛿(𝑣, 𝑡).                       this is a typical case for A*: correct
+                                                         but no performance guarantee.
+     • Consistent ℎ(. ): works like normal Dijkstra
+        • Requires 𝑤𝑖𝑗 + ℎ(𝑢𝑗 ) − ℎ(𝑢𝑖 ) ≥ 0.
+      • Nodes in 𝑆 never move back to 𝑄, when target 𝑡 enters 𝑆, we have a
+        shortest path. explores shortest path tree
+• Consistency ⇒ admissibility.
+                                  CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                  12
+Proof of property of admissible heuristics
+• Admissible ℎ . : ∀𝑧, ℎ 𝑧 ≤ 𝛿 𝑧, 𝑡 .
+• Suppose that 𝑡 will enter 𝑆 along the blue path, before some 𝑧 along the red SP 𝑠, 𝑡 .
+
+        longer path length = 𝑊 > 𝛿(𝑠, 𝑡)                                                              Contradiction!
+                                                                         𝑥
+
+                                                                                            𝑡              priority
+    𝑠                                                                                           𝑔 𝑡 = 𝑊,
+                             𝛿 𝑠, 𝑡 < 𝑊                                                                    𝑓(𝑡) = 𝑊
+                                                                𝛿 𝑧, 𝑡                          ℎ(𝑡) = 0
+                            𝛿 𝑠, 𝑧
+                                           𝑦                𝑧                                      priority
+                                                                  𝑔 𝑧 = 𝛿 𝑠, 𝑧 ,
+                                                                  ℎ 𝑧 ≤ 𝛿(𝑧, 𝑡)                    𝑓(𝑧) ≤ 𝛿 𝑠, 𝑡 < 𝑊
+         shortest path
+                                   We will add 𝑧 before
+        length = 𝛿(𝑠, 𝑡)
+                                      adding 𝑡 in 𝑆
+                                     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                       13
+Consistent potentials: Dijkstra with 𝑤 ′
+                                                                                                     since ℎ(. ) consistent
+
+• Let’s run Dijkstra with 𝑤 ′ 𝑢, 𝑣 = 𝑤 𝑢, 𝑣 + ℎ 𝑣 − ℎ 𝑢 ≥ 0.
+• Visits the same SPT (according to old weights 𝑤(𝑢, 𝑣), see next slide), but in a
+  different order that reflects the information of ℎ . .
+   • If ℎ(𝑣) ↓ as 𝑣 gets closer to the goal 𝑡, then edges include future costs: An edge
+     becomes shorter if it brings us closer to 𝑡.
+   • In this new SPT based on 𝑤 ′ , the goal 𝑡 is closer to the origin.
+   • It will be lifted earlier from the table!
+                                                                                  7
+   • Keeps all the good properties!
+                                                                                             4
+
+
+
+                                     The SPT remains the same but
+                                     𝑡 comes closer to 𝑠 while other
+                                    parts far from 𝑡 are further away                            3
+                                                                                                                  4      𝑡
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                              14
+Modifying weights using ℎ: same shortest paths
+• Suppose 𝑤 ′ 𝑢, 𝑣 = 𝑤 𝑢, 𝑣 + ℎ 𝑣 − ℎ 𝑢 .
+• Property: the shortest paths between any pair of nodes are the same under 𝑤, 𝑤 ′ .
+      • The length of any 𝑎 − 𝑏 path with modified weights is the same up to a constant that
+        depends on 𝑎, 𝑏.
+            𝑤 ′ 𝑎 = 𝑢1 , 𝑢2 , … , 𝑢𝑛 = 𝑏 = σ𝑛−1
+                                             𝑖=1 𝑤(𝑢   ,
+                                                    𝑖 𝑖+1𝑢   ) − σ 𝑛−1
+                                                                   𝑖=1 (ℎ 𝑢𝑖 − ℎ 𝑢𝑖+1 )
+                                             𝑛−1
+old path lengths 10 − 3 new path lengths
+                                         = σ 𝑖=1 𝑤(𝑢𝑖 , 𝑢𝑖+1 ) + ℎ 𝑏 − ℎ(𝑎).
+
+ℎ 𝑎          9−3         ℎ 𝑏
+=5         12 − 3        =2
+
+
+
+• Corollary: Although the weights 𝑤 ′ are different, the shortest paths from 𝑠 don’t
+  change, and the SPTs rooted at 𝑠 are the same under 𝑤, 𝑤 ′ .
+                                CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                              15
+SPTs                                                                            equal distance cycles according to
+                                                                                𝑤 ′ -distance.
+                    equal distance cycles according to
+                    𝑤-distance.
+
+
+
+
+                                𝑠                                                            𝑠
+
+                            𝑎                                                           𝑎
+                       𝑏                                                                      𝑡
+                   𝑐                                                            𝑏
+
+
+                            𝑡                                               𝑐
+                                                                                        𝐷 with 𝑤 ′ will visit 𝑠, 𝑎, 𝑡
+𝐷 with 𝑤 will visit 𝑠, 𝑎, 𝑏, 𝑐,CSC4120
+                                𝑡 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                     16
+               ′
+Dijkstra with 𝑤 is 𝐴∗
+
+• Theorem: Dijkstra with 𝑤 ′ 𝑢, 𝑣 = 𝑤 𝑢, 𝑣 + ℎ 𝑣 − ℎ 𝑢 ≥ 0 does the
+  same steps as 𝐴∗ with ℎ . .
+• 𝐴∗ is essentially Dijkstra with new edge weights to reflect future costs.
+
+
+
+
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                        17
+Proof
+• Suppose at time 𝑡, both Dijkstra with 𝑤 ′ , and 𝐴∗ with 𝑤, ℎ . , constructed the same closed
+  sets. We prove that in the next step they will bring into 𝑆 the same node from 𝑄.
+    • Which is the next node according to the 𝑤 ′ -SPT.
+                                                                                                     It has formed the w-SPT with
+                                                                                                       nodes in S, same as w’-SPT
+                    𝑆          𝑠
+                                                                         𝑆           𝑠
+                         𝑤1′                                                   𝑤1
+Dijkstra                𝑎
+                                                              𝐴∗             𝑎
+𝑤 ′ -SPT        𝑤2′                                                      𝑤2
+                               𝑑
+        𝑄                                                                              𝑑
+                𝑏                                        𝑄           𝑏
+                     ′
+                    𝑔 𝑏        = 𝑤1′ + 𝑤2′                                    𝑓 𝑏 =𝑔 𝑏 +ℎ 𝑏
+            𝑐                                                                    = 𝑤1 + 𝑤2 + ℎ(𝑏)
+                                                                𝑐
+ = 𝑤1 + ℎ 𝑎 − ℎ 𝑠 + 𝑤2 + ℎ 𝑏 − ℎ(𝑎)
+ = 𝑤1 + 𝑤2 + ℎ 𝑏 − ℎ(𝑠)
+                                       CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                                    18
+Practical ways to define ℎ(. )
+• In the next slides we show some practical methodologies for using
+  potential functions for 𝐴∗ .
+• The first is valid for Euclidean graphs, i.e., graphs that connect points on
+  an actual map.
+• The second (landmarks) is more general and makes no assumptions on
+  the graphs.
+• In each case we need to show that the function ℎ(𝑣) we construct is
+  consistent, i.e., 𝑤 𝑢, 𝑣 + ℎ 𝑣 − ℎ 𝑢 ≥ 0.
+
+
+
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                         19
+Euclidian space with obstacles
+• Typical case for moving in a Euclidian space with obstacles.
+• ℎ 𝑣 = straight distance 𝑑 𝑣, 𝑡 . Can be measured on the map. It is always a
+  lower bound on actual 𝛿 𝑣, 𝑡 . You can easily prove it is also consistent by using
+  the triangle inequality.
+                           obstacle
+                                                                                 ℎ 𝑣 ≤ 𝛿(𝑣)
+                       𝑣                       ℎ(𝑣)
+
+                  𝛿(𝑣)
+                                                        𝑡
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                              20
+                                                                                              ℎ 𝑢 = 𝑑(𝑢, 𝑡)                    𝑡
+Euclidian graphs                                                                                 𝑢
+• Find shortest path to 𝑡 in geographical maps.                                                         𝑤𝑢𝑣
+   • Graph: nodes are locations, edges are roads, weights are actual road                                          𝑣
+     distances.                                                                                            ℎ 𝑣 = 𝑑(𝑣, 𝑡)
+   • Use as ℎ(𝑢) the (straight) Euclidean distance 𝑑(𝑢, 𝑡) to target 𝑡.
+   • 𝑤𝑢𝑣 + ℎ 𝑣 − ℎ 𝑢 ≥ 0? 𝑤𝑢𝑣 ≥ 𝑑 𝑢, 𝑣 ≥ 𝑑 𝑢, 𝑡 − 𝑑 𝑣, 𝑡 .
+                                                                     ℎ 𝑢                ℎ 𝑣
+
+• Find shortest path to 𝑡 in arbitrary graphs 𝑉, 𝐸 (see next slide)
+   • Prepick a subset of nodes 𝐿 ⊂ 𝑉, the “landmarks”.
+   • Precompute the shortest distances 𝛿 𝑢, 𝑙 , 𝛿 𝑙, 𝑢 for all 𝑢 ∈ 𝑉, 𝑙 ∈ 𝐿.
+   • Use as ℎ 𝑢 = max max{𝛿 𝑢, 𝑙 − 𝛿 𝑡, 𝑙 , 𝛿 𝑙, 𝑡 − 𝛿 𝑙, 𝑢 } .
+                     𝑙∈𝐿                                                                             why is this consistent?
+                                             compute this for each landmark 𝑙                             needs proof
+                                      choose the max over all landmarks
+                              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                       21
+                                                                                                           𝐴                  𝐵
+General graphs: Landmarks                                                                                      𝛿 𝐵, 𝑡
+                                                                                                                            𝛿 𝑡, 𝐵
+
+• Choose as ℎ𝑡 (𝑢) an estimate of 𝛿(𝑢, 𝑡) based on “landmarks”. 𝑢       𝑣    𝑡
+• For each specific landmark node 𝐴, 𝐵, … pre-compute SP distances to and
+  from all nodes of the graph.
+• Get “good” lower bounds on actual distance 𝛿(𝑢, 𝑡) , use it as ℎ𝑡 𝑢 .
+• Is more general, works for general graphs, no Euclidian distance involved.
+• 𝛿 𝑢, 𝑡 + 𝛿 𝑡, 𝐴 ≥ 𝛿(𝑢, 𝐴) ⇒ 𝛿 𝑢, 𝑡 ≥ 𝛿 𝑢, 𝐴 − 𝛿(𝑡, 𝐴)
+• 𝛿 𝐴, 𝑢 + 𝛿 𝑢, 𝑡 ≥ 𝛿(𝐴, 𝑡) ⇒ 𝛿 𝑢, 𝑡 ≥ 𝛿 𝐴, 𝑡 − 𝛿(𝐴, 𝑢)
+• Hence, 𝛿 𝑢, 𝑡 ≥ max 𝛿 𝑢, 𝐴 − 𝛿 𝑡, 𝐴 , 𝛿 𝐴, 𝑡 − 𝛿 𝐴, 𝑢                                           ≜ 𝐿(𝐴, 𝑢, 𝑡).
+                         𝛿 𝑢, 𝑡 ≥ max{𝐿 𝐴, 𝑢, 𝑡 , 𝐿 𝐵, 𝑢, 𝑡 , 𝐿 𝐶, 𝑢, 𝑡 , … }
+                                         ≜ ℎ𝑡 (𝑢)                                          This proves admissibility of
+                                                                                           ℎ𝑡 (𝑢). Can also prove that it
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   is consistent (in HW)
+                                                                                                                             22
+Landmarks (cont.)
+• When are the lower bounds tight? ℎ𝑡 𝑢 = 𝛿 𝑢, 𝑡 .
+• A “best” landmark 𝑋: 𝑢 is on 𝑆𝑃(𝑋, 𝑡) or 𝑡 is in 𝑆𝑃(𝑢, 𝑋).
+   • In this case the lower bounds are tight.
+
+
+
+
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                         23
+Conclusions
+• When we care for the SP to a single destination Dijkstra may be inefficient
+  since it explores the graph towards all possible directions.
+• There are some smart ways to remedy that. We examined bi-directional
+  search, and potential-based methods. These later ones modify Dijkstra’s
+  algorithm to focus its search towards the destination.
+• 𝐴∗ is an AI algorithm that finds shortest paths on the plane when obstacles
+  are inserted. It uses a potential function ℎ that approximates the future
+  costs from any given node.
+• 𝐴∗ can be seen as a specific case of Dijkstra’s algorithm with weights that
+  reflect future costs.
+
+
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                        24
+

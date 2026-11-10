@@ -1,0 +1,511 @@
+• Shortest paths
+  • Bellman-Ford algorithm
+
+     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   1
+Objective
+• Define the single source shortest path problem.
+• Relaxations and Bellman equations.
+• The Bellman-Ford algorithm.
+• DPV Chapter 4.
+• CLRS 24.0-24.3.
+
+
+
+
+                     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   2
+Weighted paths in graphs                                                                   Simple path: a path that
+• Given:                                                                                   does not repeat nodes.
+                                                                                           Cycle: path 𝑣0 , 𝑣1 , … , 𝑣𝑘 , 𝑣0
+  • A directed graph 𝐺 = (𝑉, 𝐸).
+  • A weight function 𝑤: 𝐸 → 𝑅.
+  • A path 𝑝 =< 𝑣0 , 𝑣1 , … , 𝑣𝑘 >.
+  • The weight of a path 𝑝: 𝑤 𝑝 = σ𝑘𝑖=1 𝑤(𝑣𝑖−1 , 𝑣𝑖 ) .
+
+                             a
+                     2                     5
+                 s                                   c
+                         2           -1
+                     6                    6
+                                                   𝑤 𝑠𝑎𝑏𝑐 = 2 + −1 + 6 = 7
+                                 b
+                                                   𝑤 𝑠𝑎𝑏𝑎𝑏𝑐 = 2 + −1 + 2 + −1 + 6 = 8.
+
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                                       3
+Shortest-paths problems
+• 𝛿 𝑢, 𝑣 : shortest distance from 𝑢 to 𝑣: weight (length) of shortest-path from
+  𝑢 to 𝑣.
+                                            𝑝
+            min 𝑤 𝑝 : 𝑢 → 𝑣 if there is at least one path 𝑝 from 𝑢 to 𝑣,
+• 𝛿 𝑢, 𝑣 = ቐ 𝑝
+                           ∞       if there is no path.
+• This shortest distance is realized along a set of shortest paths 𝑆𝑃 𝑢, 𝑣 .
+                       a
+               2                    5
+        s                               c                             𝛿 𝑢, 𝑣 always exists and is unique.
+                   2           -1
+                                                                      But there may be many 𝑆𝑃s that
+              6                     6                                 correspond to 𝛿 𝑢, 𝑣 .
+                           b
+    𝛿 𝑠, 𝑐 = 7,
+    𝑆𝑃 𝑠, 𝑐 = { 𝑠𝑎𝑏𝑐 , 𝑠𝑎𝑐     }.
+                        CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                     4
+                                                                                                               SPs to a given node:
+Fix the starting node                                                                                         just reverse the graph.
+
+• We fix the starting node 𝑠, i.e., no need to mention it each time.
+• Each node 𝑣 likes to know: (i) his shortest path distance 𝛿(𝑣), (ii) his predecessor
+  node 𝑣. 𝜋 along one such a shortest path.
+• Shortest distance of node 𝑏: 𝛿 𝑏 ≜ 𝛿 𝑠, 𝑏 = 1, 𝑣. 𝜋 = 𝑎. 𝑆𝑃 𝑏 = { 𝑠𝑎𝑏 }.
+• 𝛿 𝑐 ≜ 𝛿 𝑠, 𝑐 = 7, through nodes 𝑎 or 𝑏. 𝑆𝑃 𝑐 = { 𝑠𝑎𝑏𝑐 , 𝑠𝑎𝑐 }.
+                                  𝑐. 𝜋 = 𝑎
+                             a
+                     2                      5                                                      𝑣. 𝜋
+                 s                                     c             𝑠
+                         2             -1                                                            𝑧
+                                                                                                          𝑣
+                     6                      6
+                                 b
+
+
+                                     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                               5
+Important property of optimal paths
+• Sub-paths of shortest paths are also shortest paths. It follows that
+• If 𝑣𝑗 on optimal path from 𝑣0 to 𝑣𝑛 : 𝛿 𝑣0 , 𝑣𝑛 = 𝛿 𝑣0 , 𝑣𝑗 + 𝛿 𝑣𝑗 , 𝑣𝑛 .
+
+
+
+
+• If the sub-path 𝑣𝑖 to 𝑣𝑗 is not optimal, then by finding a shorter path
+  from 𝑣𝑖 to 𝑣𝑗 we can strictly improve the original path.
+
+
+
+                           CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   6
+Triangle inequality                        shortest paths
+                                           = straight lines
+
+• Generalizes the case of a Euclidean graph.
+
+                               d (u,t)
+
+
+
+
+• In general: 𝛿 𝑠, 𝑡 ≤ 𝛿 𝑠, 𝑢 + 𝛿 𝑢, 𝑡 .
+• If 𝑢 not on shortest path from 𝑠 to 𝑡: 𝛿 𝑠, 𝑡 < 𝛿 𝑠, 𝑢 + 𝛿 𝑢, 𝑡 .
+• 𝑢 is on shortest path from 𝑠 to 𝑡 iff 𝛿 𝑠, 𝑡 = 𝛿 𝑠, 𝑢 + 𝛿 𝑢, 𝑡 .
+
+
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   7
+Triangle inequality for predecessors
+                                                                                                predecessors of 𝑡
+• A special case of the triangle inequality.
+                                                                       𝛿(𝑠, 𝑢1 )                   𝒑𝒓𝒆(𝑡)
+                                                                                              𝑢1
+                                                   short. path (𝑠, 𝑢1 )
+                                                                                                   𝑤(𝑢1 , 𝑡)
+                                                                        𝛿(𝑠, 𝑢2 ) 𝑢2        𝑡
+                                             𝑠                                    𝑤(𝑢2 , 𝑡) 𝛿(𝑠, 𝑡)
+                                                       short. path (𝑠, 𝑢2 )
+                                                                                  𝑢3 𝑤(𝑢 , 𝑡)
+                                                                                                         3
+
+                                                        short. path(𝑠, 𝑢3 )               𝛿(𝑠, 𝑢3 )
+
+• 𝛿 𝑠, 𝑡 =    min {𝛿 𝑠, 𝑢 + 𝑤 𝑢, 𝑡 }.
+             𝑢∈𝒑𝒓𝒆(𝑡)
+• If 𝑢 not on shortest path from 𝑠 to 𝑡: 𝛿 𝑠, 𝑡 < 𝛿 𝑠, 𝑢 + 𝑤 𝑢, 𝑡 .
+• 𝑢 is on shortest path from 𝑠 to 𝑡 iff 𝛿 𝑠, 𝑡 = 𝛿 𝑠, 𝑢 + 𝑤 𝑢, 𝑡 .
+
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                             8
+Source of difficulty: Negative weight edges
+                            Each time we use the positive cycle we add +3
+                            to the path, hence we don’t like to repeat the cycle.
+
+
+
+
+                                              Conclusion: negative weight edges create
+                                              problems only if they generate negative cycles.
+Repeating the negative                        No negative cycles ⇒ shortest paths are always
+cycle adds -3 to path.                        “simple” (no repetition of nodes).
+
+
+
+
+                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis       9
+Graphs with no negative cycles
+• Assume DGs with no negative cycles.                                hence shortest distance is achieved
+                                                                        over paths that are simple.
+• Initial state = 𝑠.
+Proposition: 𝛿(𝑠, 𝑢) is well-defined and
+                       < ∞ for reachable nodes,
+       𝛿 𝑠, 𝑢 = ቊ
+                       = ∞ for unreachable nodes.
+Proof:
+• We lose nothing to consider shortest paths = simple paths.
+• From 𝑠 → 𝑢 there is a finite set of simple paths, pick one with the smallest
+  weight.
+• But there can be exponentially many simple paths. # of simple paths can be exponential!
+                                                                                    s                      …        t
+                             CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                       10
+Equations for shortest distance
+Proposition: (characterization of 𝛿(. ))
+• 𝛿(𝑠, 𝑡) satisfies the Bellman equations:
+        𝛿 𝑠, 𝑡 = min {𝛿 𝑠, 𝑢 + 𝑤 𝑢, 𝑡 } ,
+                      𝑢∈𝑝𝑟𝑒 𝑡
+       𝛿 𝑠, 𝑠 = 0.
+• The solution 𝛿(. ) of the equations is unique.
+   • Defines also 𝑡. 𝜋 (non-unique).                                                                                     from
+                                                                                                                        Bellman
+• Proof: assume another solution 𝛿 ′ , 𝛿 ′ 𝑡 > 𝛿 𝑡 .
+                                                                                              𝛿 𝑡 = 𝛿 𝑢 + 𝑤𝑢,𝑣
+shortest path 𝑠 → 𝑡                                                                           𝛿 ′ 𝑡 ≤ 𝛿 ′ 𝑢 + 𝑤𝑢,𝑣
+                                                                     𝛿′ 𝑡 > 𝛿 𝑡
+according to 𝛿.                                                                               0 < 𝛿′ 𝑡 − 𝛿 𝑡 ≤ 𝛿′ 𝑢 − 𝛿 𝑢 ⇒
+                           𝛿′ 𝑢 > 𝛿 𝑢
+                                                                                              𝛿′ 𝑢 > 𝛿 𝑢 .
+                                          𝛿′ 𝑡 > 𝛿 𝑡
+       𝑠                                                                                      Continue backwards on path until 𝑠,
+                            𝑢               𝑡                                                 ⇒ 𝛿′ 𝑠 > 𝛿 𝑠 .
+
+                                CSC4120 Design and Analysis of Algorithms - C. Courcoubetis             contradiction    11
+Shortest path trees (positive weights)
+• Solve the Bellman equations for 𝛿 𝑡 , ∀𝑡; follow pointers 𝑡. 𝜋 backwards to 𝑠.
+• This defines an SPT.
+                                                            𝛿𝑥 ≤ 𝛿𝑦 + 𝑤𝑦𝑥 : 9 ≤ 5 + 4
+                                              𝛿𝑥 = 𝛿𝑡 +𝑤𝑡𝑥
+• Why?                                          9=3+6
+                                                            𝛿𝑥 ≤ 𝛿𝑧 + 𝑤𝑧𝑥 : 9 ≤ 11 + 7
+
+
+
+
+If we knew an SPT, we have solved our problem of finding 𝛿 . .
+It gives us the order of solving the Bellman equations: on each level going away from 𝑠
+How to use this interesting observation?
+                                    CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   12
+Using relaxations
+Improving our shortest distance estimates step by step
+
+
+
+                   CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   13
+Improving the estimates
+• At any time, nodes store their current estimates 𝛿መ 𝑣 of their shortest distance and
+  advertise it to their neighbors.
+• Same as “a guarantee that 𝑣 can be reached from 𝑠 with no more than 𝛿መ 𝑣 cost”.
+• There must be always a justification:
+     • For some predecessor node 𝑡 → 𝑣, we must have 𝛿መ𝑡 + 𝑤𝑡𝑣 = 𝛿መ𝑣
+• If for some edge 𝑢, 𝑣 , 𝛿መ𝑢 + 𝑤𝑢𝑣 < 𝛿መ𝑣 , then 𝑣 can strictly improve its guarantee
+  𝛿መ𝑣′ = 𝛿መ𝑢 + 𝑤𝑢𝑣 by using 𝑢 as its predecessor, 𝑣. 𝜋 = 𝑢.
+new value
+
+
+                          𝛿መ = 3                                               3
+                      𝑡        መ                                           𝑡
+                             5 𝛿 = 8, 𝑣. 𝜋 = 𝑡                                          5         8
+                                        𝑣                                                     𝑣
+                                                                             𝑤𝑢𝑣 = 2
+                                                                           𝑢         𝛿መ 𝑣 = 6, 𝑣. 𝜋 = 𝑢
+                                                                             4
+                                                                                         14
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                14
+Relaxations (“update operations” in DPV)
+• Relaxing edge (𝑢, 𝑣):
+     • improve the estimate 𝛿መ𝑣 of 𝑣 through 𝑢, 𝑣 : 𝛿መ𝑣′ = min{𝛿መ𝑣 , 𝛿መ𝑢 + 𝑤𝑢𝑣 }.
+• If initially all estimates 𝛿መ𝑢 are “safe”, i.e., 𝛿መ𝑢 ≥ 𝛿𝑢 ∀𝑢 ∈ 𝑉, then after any relaxation
+  they remain safe: cannot underestimate the true 𝛿.
+      𝛿𝑢 = 5
+
+                        𝑤𝑢𝑣
+
+                                                                                                   not successful:
+                                      successful:                                              𝛿መ𝑣 remains the same
+                                      reduce 𝛿መ𝑣
+                          𝑣. 𝜋
+
+    If successful, make it a tree edge             If not successful, leave things the way they are
+               update 𝑣. 𝜋 = 𝑢
+
+                                 CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                          15
+Relaxations converge to an SPT
+• If successful relaxations still possible, Bellman equations are not satisfied.
+• If no more successful relaxations possible ⇒ Bellman equ. satisfied ⇒ 𝑆𝑃𝑇.
+• Construct the SPT: Just follow backwards the 𝑣. 𝜋 pointers for each node.
+
+
+                   𝑤𝑢𝑣
+
+                                                                                                 not successful:
+                                  if successful:                                             𝛿መ𝑣 remains the same
+                                    reduce 𝛿መ𝑣
+                     𝑣. 𝜋
+
+If successful, make it a tree edge
+          update 𝑣. 𝜋 = 𝑢
+
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                          16
+Example
+                                                1                                1                        Algorithm: Keep relaxing
+                                    1                             1
+                                                                                                          edges successfully until no
+                                0           1       1       0                1           1                more possible.
+                                                                                                          ⇒ Shortest path tree
+                ∞                   3                                3
+    1                                           ∞                                    2
+                                                                                                            is this a good algorithm?
+0           1       1
+                                                ∞                                4                               1                   1
+                                    1                            1                                 1                         1
+    3
+                ∞
+                                0           1           1   0               1        1       0               1       1   0       1        1
+
+                                        3                         3                                  3                       3
+                        1                           3                            3                               3                   2
+        1
+
+    0               1       1
+
+        3
+                        2                   CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                              17
+Idea of an algorithm
+• Iterative algorithm: we start with some safe estimate 𝛿መ . = ∞ of 𝛿(. )
+  and keep improving it by relaxations until we get to the actual 𝛿(. ).
+• Do until nothing changes:
+    • Relax one all edges in this graph (in any order)
+• What will happen at the end?
+
+
+
+
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   18
+                                                   Don’t worry how
+   Let’s check!                                    we know the SPT
+
+ • Assume that we know an SPT. Initially all estimates are 𝛿መ = ∞.
+
+  levels: distance
+form 𝑠 on the tree
+                                                     𝑑
+                                                         𝛿𝑑 = ∞
+                                      𝛿𝑐 = ∞ 3
+                                          𝑐
+                   𝛿𝑏 = ∞ 𝑏 2                                                 We show only the edges of the the SPT.
+                                                     𝛿𝑒 = ∞                   There are more edges that we don’t show
+                          3                    1
+         𝑠            𝑎                                                       here.
+               1          𝛿𝑎 = ∞                     𝑒
+   𝑑𝑠 = 0                     4
+                                      𝛿𝑔 = ∞
+                                  𝑔
+  nodes at level 0
+ know the correct 𝛿
+
+
+
+
+                                                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis    19
+Relax all edges x 1
+
+                                               𝑑                                                                 ☺ = don’t care
+                                                   𝛿𝑑 = ∞                                                        what is the value
+                                 𝛿𝑐 = ∞ 3
+                                     𝑐                                                           𝑑
+                                                                                                     𝛿𝑑 = ☺
+                𝛿𝑏 = ∞ 𝑏 2                                                     𝛿𝑐 = ☺ 3
+                                              𝛿𝑒 = ∞                                  𝑐
+                     3                    1
+      𝑠          𝑎                                           𝛿𝑏 = ☺ 𝑏 2
+            1        𝛿𝑎 = ∞                    𝑒                                          1     𝛿𝑒 = ☺
+                                                                   3
+𝑑𝑠 = 0                   4                         𝑠          𝑎
+                                                         1          𝛿𝑎 = 1                       𝑒
+                                 𝛿𝑔 = ∞
+                             𝑔                𝑑𝑠 = 0                   4
+                                                                               𝛿𝑔 = ☺
+                                                                           𝑔
+ nodes at level 0
+know the correct 𝛿
+                                              nodes at level 1 know
+                                                 their correct 𝛿
+                                                   CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                       20
+  Relax all edges x 2
+
+                                                   𝑑                                                                 ☺ = don’t care
+                                                           𝛿𝑑                                                        what is the value
+                                     𝛿𝑐 = ∞ 3
+                                         𝑐                 =∞                                        𝑑
+                                                                                                         𝛿𝑑 = ☺
+                  𝛿𝑏 = ∞ 𝑏 2                                                       𝛿𝑐 = ☺ 3                                                              𝑑
+                                                  𝛿𝑒 = ∞                                  𝑐                                                                  𝛿𝑑 = ☺
+                         3                    1                                                                                           𝛿𝑐 = ☺ 3
+        𝑠            𝑎                                           𝛿𝑏 = ☺ 𝑏 2                                                                    𝑐
+              1          𝛿𝑎 = ∞                    𝑒                                          1     𝛿𝑒 = ☺               𝛿𝑏 = 4 𝑏 2
+                                                                       3
+  𝑑𝑠 = 0                     4                         𝑠          𝑎                                                                                     𝛿𝑒 = ☺
+                                                             1          𝛿𝑎 = 1                       𝑒                        3                    1
+                                     𝛿𝑔 = ∞                                                                    𝑠          𝑎
+                                 𝑔                𝑑𝑠 = 0                   4                                         1        𝛿𝑎 = 1                     𝑒
+                                                                                   𝛿𝑔 = ☺                𝑑𝑠 = 0                   4
+ nodes at level 0
+                         round 0                                               𝑔                                                          𝛿𝑔 = 5
+know the correct 𝛿
+                                                                                    round 1                                           𝑔
+                                                    nodes at level 1
+                                                   know the correct 𝛿
+                                                                                                                     round 2                 nodes at level 2
+                                                                                                                                            know the correct 𝛿
+                                                       CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                                           21
+  Relax all edges x 4
+• All the nodes on the SP tree will know their actual SP distance.
+• We need max 𝑛 − 1 rounds.                                                                                                                            nodes at last level
+                                                                                                                                                       know the correct 𝛿
+                                                   𝑑
+                                                           𝛿𝑑
+                                     𝛿𝑐 = ∞ 3
+                                         𝑐                 =∞                                        𝑑
+                                                                                                         𝛿𝑑 = ☺
+                  𝛿𝑏 = ∞ 𝑏 2                                                       𝛿𝑐 = ☺ 3                                                                𝑑
+                                                  𝛿𝑒 = ∞                                  𝑐                                               𝛿𝑐 = 6 3             𝛿𝑑 = 9
+                         3                    1
+        𝑠            𝑎                                           𝛿𝑏 = ☺ 𝑏 2                                                                   𝑐
+              1          𝛿𝑎 = ∞                    𝑒                                          1     𝛿𝑒 = ☺               𝛿𝑏 = 4 𝑏 2
+                                                                       3
+  𝑑𝑠 = 0                     4                         𝑠          𝑎                                                                                       𝛿𝑒 = 7
+                                                             1          𝛿𝑎 = 1                       𝑒                        3                    1
+                                     𝛿𝑔 = ∞                                                                    𝑠          𝑎
+                                 𝑔                𝑑𝑠 = 0                   4                                         1        𝛿𝑎 = 1                       𝑒
+                                                                                   𝛿𝑔 = ☺                𝑑𝑠 = 0                   4
+ nodes at level 0
+                             round 0                                           𝑔                                                          𝛿𝑔 = 5
+know the correct 𝛿                                                             round 1                                                𝑔
+                                                     nodes at level 1
+                                                    know the correct 𝛿                                                                       round 4
+                                                       CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                                             22
+We got an algorithm!
+• (a) Start with a safe estimate of shortest distances for all nodes.
+• (b) Perform 𝑉 − 1 times “relax all edges of 𝐺”: to compute 𝛿𝑢 for all nodes 𝑢 ∈ 𝑉.
+• OK! but only if no negative cycles (since then, unique shortest distances).
+• How to test for negative cycles?
+• (c) Relax all edges once more: if the values of 𝛿መ𝑢 , 𝑢 ∈ 𝑉 don’t change, we are OK.
+
+
+                    These 3 steps constitute the
+                    Bellman-Ford algorithm
+
+
+
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   23
+Bellman-Ford algorithm
+for v in V:
+     v.d = ∞      initialization
+     v.π = nil      Θ(|V|)        𝑛 = |𝑉|
+s.d = 0
+do n-1 times:
+    for each edge (u,v) in E: main loop
+                                                                                Complexity: Θ(|V||E|)
+        relax (u,v)              Θ(|V||E|)
+                                                                                Θ(|V|3): dense graphs
+                              𝛿መ𝑣 would change if                               Θ(|V|2): sparse graphs
+for each edge (u,v) in E:        one more step.
+    if v.d > u.d+ w(u,v):
+           report a negative cycle & return                   negative cycle detection
+report no negative cycles                                         Θ(|E|)
+
+Property: if no negative cycles, then at termination for all 𝑣: 𝑣. 𝑑 = 𝛿 𝑠, 𝑣 .
+
+                                 CSC4120 Design and Analysis of Algorithms - C. Courcoubetis             24
+Bellman-Ford example
+
+
+
+
+               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   25
+Conclusions
+• Shortest paths from a single source exist when there are no negative
+  loops; they form a shortest-path tree.
+• The “value function” 𝛿 (weight of shortest path) at each node satisfy
+  the Bellman equations (triangle inequality).
+• 𝛿 satisfies a set of inequalities with at least one equality per node
+  and can be solved by “relaxations” starting from some conservative
+  estimate.
+• If we could guess the shortest path tree, then 𝑉 − 1 relaxations
+  could lead to the solution of 𝛿.
+• Bellman-Ford algorithm: plays safe and relaxes all 𝑚 edges 𝑉 − 1
+  times, with complexity Θ(𝑛𝑚).
+
+                         CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   26
+Example 2                                                           don’t worry about the different color of edges
+
+
+
+
+            Find the shortest path from node 0
+
+
+
+
+                  CSC4120 Design and Analysis of Algorithms - C. Courcoubetis                              27
+Example 2 Answer
+             6
+
+
+             5
+
+             5
+
+
+
+
+                 CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   28
+Example 2 Answer
+              3                            5
+
+
+               3
+
+               5                           4
+
+
+
+
+              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis   29
+Example 2 Answer
+              1                            2
+
+
+               3                                                            7
+
+               5                           4
+
+
+
+
+              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis       30
+Example 2 Answer
+              1                            0
+
+
+               3                                                            5
+
+               5                           4
+
+
+
+
+              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis       31
+Example 2 Answer
+              1                            0
+
+
+               3                                                            3
+
+               5                           4
+
+
+
+
+              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis       32
+

@@ -1,0 +1,274 @@
+Contents
+
+1 Running Time of Dijkstra                                                                                       1
+
+2 Bounded Integer Edge Weights                                                                                   1
+
+3 Single source, Single Target (SPP)                                                                             2
+    3.1   Early Termination: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     2
+    3.2   Bi-directional Search: . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   2
+    3.3   Potentials . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   4
+
+
+
+1     Running Time of Dijkstra
+
+General Running Time: Initialization: O(|V |), Main loop: Every vertex requires exactly one
+Extract-Max (we can skip the Inserts if we assume we insert all vertices when they have equal
+keys of ∞ and therefore can insert them in any order). Each edge can require up to one Decrease-Key
+and it is possible to come up with a case in which every edge does require a Decrease-Key. Therefore,
+in terms of these operations the running time is O(|V |)TExtract-Min + O(|E|)TDecrease-Key .
+We would like Extract-Min and Decrease-Key to all be constant time... but as long as TDecrease-Key =
+o(|V |) and TExtract-Min = o(|E|), this is still probably better than Bellman-Ford!
+
+
+                         Structure            Extract-Min               Decrease-Key         Running Time
+                         array                O(|V |)                   O(1)                 O(|V |2 )
+Data Structures:
+                         binary heap          O(log |V |)               O(log |V |)          O(|E| log |V |)
+                         Fibonnacci heap      O(log |V |) amortized     O(1) amortized       O(|V | log |V | + |E|)
+
+
+Fibonnaci Heaps: Are not part of 6.006. Chapter 20 of CLRS talks about them if you are interested.
+
+
+
+2     Bounded Integer Edge Weights
+
+Assume edge weights are non-negative integers bounded by C. Use an array of length |V |C + 1 for
+priority queue where vertices with paths of length i are stored in bucket i.
+Why does this work? Because all paths are less than (|V | − 1)C ⇒ |V |C − C + 1 ≤ |V |C + 1 possible
+path values.
+When you assign a path length to a previously unassigned node, you put it in its correct bucket. “∞”
+lives in |V |C.
+
+
+Algorithms:      Decrease-Key(v, k) just moves vertex v from bucket key[v] to bucket k.
+
+
+
+
+                                                        1
+Extract-Max
+1 global curr-bucket // Initialize to zero at start of whole algorithm
+2 while (curr-bucket is empty)
+3      curr-bucket← curr-bucket +1
+4 return First value in curr-bucket
+
+
+Correctness of Extract-Max:           By induction. Do it yourself.
+
+
+Running Time of Decrease-Key and Extract-Min: Clearly Decrease-Key is O(1). In ad-
+dition, Extract-Max amortizes to O(1): over the course of the whole algorithm we see every bucket
+once. So, over the algorithm, the time of all calls to Extract-Max sums to O(|V |C). We extract each
+vertex once and only once so we make |V | calls to Extract-Max. Therefore, each call amortizes to
+O(|V |C)/O(|V |) = O(1).
+
+
+Running Time:       O(|V | + |E|) It’s linear!
+
+
+Circular Queues: You can use an array of only length C rather than length |V |C + 1 where path
+length i is stored in bucket i mod C. The correctness of this relies on the fact that the first vertex with
+path length kC + i is not inserted into the queue until we have extracted the last vertex with path length
+(k − 1)C + i. Just argue that since every edge weight is less than C, you cannot relax an edge with
+weight less than (k − 1)C + i and get an edge with weight kC + i. Do it formally yourself.
+
+
+
+3     Single source, Single Target (SPP)
+
+If you have a negative weight and cycles, you can’t do better than Bellman-Ford since you never know
+where a negative weight cycle might be lurking... You can’t stop at t when you reach it.
+So assume non-negative weights.
+
+
+3.1    Early Termination:
+
+We could stop Dijkstra when we hit t. In the worst case, this is no better, but it can help.
+
+
+3.2    Bi-directional Search:
+
+Search from s and t and t to s and hope you meet in the middle!
+Alternate foward from s with backwards from t. df is forward distances, db is backwards distance.
+Termination: Vertex w has been popped off queue in both forwards and backwards search. BUT
+δ(s, t) 6= df [w] + db [w]. Rather δ(s, t) = minu∈V (df [u] + db [u]).
+
+
+Lemma A:      δ(s, t) ≤ minu∈V (df [u] + db [u])
+
+
+
+                                                    2
+Proof: Let a shortest path from s to t be (u1 , u2 ), (u2 , u2 ), ..., (un−1 , un ) where u1 = s and un = t. For
+all shortest paths, we must have at least one edge weight wrong. -
+
+
+                                  min (df [u] + db [u]) ≥ min (δ(s, u) + δ(u, t))
+                                  u∈V                          u∈V
+
+by the upper bound theorem
+                                           min (δ(s, u) + δ(u, t) ≥ δ(s, t))
+                                           u∈V
+
+by the triangle inequality.
+
+
+Lemma B: Let v be the vertex that has been popped off the queue in both the forward and backwards
+searches. Let p = h(u1 , u2 ), ..., (un−1 , un )i be a shortest path from s to t (u1 = s and un = t). Let uf
+be the vertex on this path with the largest df value that has come out of the forward queue and let ub
+be the vertex on this path with the largest db value that has come out of the backwards queue. Then
+either uf = ub or uf = ub−1 .
+Proof: By the properties of Dijkstra, we must have that df [uf ] = δ(s, uf ) and db [ub ] = δ(ub , t). Moreover,
+since uf is the largest vertex to have come out of the forwards queue and ub is the largest vertex to come
+out of the backwards queue and p is a shortest path, the following must hold:
+
+                               δ(s, uf ) ≤ δ(s, v)                                                               (1)
+                               δ(s, uf ) + w(uf , uf +1 ) ≥ δ(s, v)                                              (2)
+                               δ(ub , t) ≤ δ(v, t)                                                               (3)
+                               w(ub−1 , ub ) + δ(ub , t) ≥ δ(v, t)                                               (4)
+                                                         b−1
+                                                         X
+                               δ(s, uf ) + δ(ub , t) +         w(ui , ui+1 ) ≤ δ(s, v) + δ(v, t)                 (5)
+                                                         i=f
+
+Combining equations 2 and 4
+
+                      δ(s, uf ) + δ(ub , t) + w(uf , uf +1 ) + w(ub−1 , ub ) ≥ δ(s, v) + δ(v, t).
+
+In order that equation 5 hold, therefore
+                                  b−1
+                                  X
+                                        w(ui , ui+1 ) ≤ w(uf , uf +1 ) + w(ub−1 , ub )
+                                  i=f
+
+and we must have either uf = ub or uf = ub−1 .
+
+
+Correctness: When a vertex has been popped off the queue of both the forwards and the backwards
+search, δ(s, t) = minu∈V (df [u] + db [u]).
+Proof: We show that there is some vertex q such that δ(s, t) = df [q] + db [q]. The correctness then follows
+from Lemma A.
+Let p = h(u1 , u2 ), ..., (un−1 , un )i be a shortest path from s to t. Let uf be the vertex on this path with the
+largest df that has been popped off the forward queue and let ub be vertex on this path with the largest
+db that has been popped off the queue. Then, by the proof of Dijkstra’s algorithm, we have relaxed
+(u1 , u2 ), ..., (uf −1 , uf ), (uf , uf +1 ) in order (we did the last relaxation when we pushed uf onto the queue).
+Similarly, we have relaxed (un , un−1 ), ..., (ub , ub−1 ) in order (in the backwards search). By Lemma B,
+
+
+                                                               3
+uf = ub or uf = ub−1 . In the first case, consider vertex uf . We have by the path relaxation property
+that df [uf ] = δ(s, uf ) and db [uf ] = δ(uf , t). Since p is a shortest path, δ(s, t) = δ(s, uf ) + δ(uf , t) =
+df [uf ] + db [uf ]. Similarly, in the second case, consider the vertex uf +1 . By the path relaxation property,
+df [uf +1 ] = δ(s, uf +1 ), db [uf +1 ] = δ(ub , t) and δ(s, t) = δ(s, uf +1 ) + δ(ub , t) = df [uf +1 ] + db [ub ].
+
+
+3.3     Potentials
+
+Potential function is function of target t and vertex v, denoted λt (v).
+We modify weights using this potential:
+
+                                        w∗ (u, v) ← w(u, v) − λt (u) + λt (v)
+
+
+Feasibility:    ∀u, v ∈ V, w(u, v) − λt (u) + λt (v) ≥ 0. So we can still use Dijkstra!
+
+
+Landmarks: Choose a landmark l. For each u ∈ V , pre-compute δ(u, l). Then
+                                               (l)
+                                             λt (u) = δ(u, l) − δ(t, l)                                         (6)
+
+is a feasible potential. This is basically just saying, a good estimate is that the route from u to l probably
+gets near t.
+Proof of Feasibility: Show that
+                                                                   (l)           (l)
+                                   w∗(u, v) = w(u, v) − λt (u) + λt (v) ≥ 0
+
+You’ll do this in your problem set.
+                                                                                                      (l)
+You can also do this with a whole set of potentials L. For each l ∈ L and u ∈ V , compute λt (u). Then
+you can use the potential function
+                                                         (l)
+                                          λt (u) = max λt (u)
+                                                              l∈L
+
+or once you know the target, you can pick a landmark close to the target. Again, you’ll prove the
+feasibility of this in your problem set.
+
+
+Euclidean distance: Assume we are working with a graph set on a Euclidean plane and the weight of
+an edge, w(u, v), is somehow related to the Euclidean distance between the vertices, l(u, v). This is the
+case, for example, when u and v lie on a map and the weight is the driving distance between them. The
+absolute shortest possible distance from u to v is l(u, v) (“as the crow flies”) but being constrained to
+stay on a road may make the distance longer. However, it is unlikely that the driving distance between
+two points two miles apart will be greater than the driving distance between two points 50 miles apart
+so the weights are related to the Euclidean distance.
+In this case, a feasible potential is
+                                                                  l(u, t)
+                                                     λt (u) =
+                                                                   vmax
+where                                                                       
+                                                                   l(u, v)
+                                             vmax = max                          .
+                                                        u,v        w(u, v)
+
+
+
+                                                              4
+Proof of Feasibility:
+
+                              w∗ (u, v)    = w(u, v) − λt (u) + λt (v)
+                                                       l(u, t) − l(v, t)
+                                           = w(u, v) −
+                                                             vmax
+                                                       l(u, v)
+                                           ≥ w(u, v) −
+                                                        vmax
+                                                                                
+                                                                        w(q, r)
+                                           = w(u, v) − l(u, v) min
+                                                               q,r∈V     l(q, r)
+                                                                          
+                                                                  w(u, v)
+                                           ≥ w(u, v) − l(u, v)
+                                                                  l(u, v)
+                                           = 0
+
+Note that the triangle inequality gives l(t, v) ≥ l(t, u)+l(u, v). Rearranging shows l(u, t)−l(v, t) ≤ l(u, v),
+which we have used.
+
+
+Connection to A* Search: In A* search, heap is ordered according to function
+
+                                                 f (u) = g(u) + h(u)
+
+g(u) = d[u], the current distance from the starting vertex s to n. h(u) is a heuristic function giving
+an estimate of the distance from u to t (note that h(u) = 0 gives Dijkstra’s algorithm). A heuristic is
+admissible if h(u) ≤ δ(u, t). A search with an admissible heuristic is guaranteed to find the shortest
+path.
+Given a potential function λt (u), doing Dijkstra’s algorithm with the weights w∗ is equivalent to doing
+an A* search using the heuristic function h(u) = λt (u) − λt (s). Assume our current d∗ [u] (distance using
+starred weights) in Dijkstra’s algorithm was found using path (v1 , v2 ), ..., (vn−1 , vn ):
+                                          n−1
+                                          X
+                           d∗ [u]   =           w∗ (ui , ui+1 )
+                                          i=1
+                                          n−1
+                                          X                       n−1
+                                                                  X                  n
+                                                                                     X
+                                    =           w(ui , ui+1 ) −         λt (ui ) +         λt (uj )
+                                          i=1                     i=1                j=2
+                                    = d[u] − λt (s) + λt (u)
+                                    = g(u) + h(u)                                                          (7)
+
+A very similar calculation shows that if λt is a feasible potential then the corresponding heuristic function
+is admissible if λt (t) ≥ 0.
+
+
+
+
+                                                            5
+

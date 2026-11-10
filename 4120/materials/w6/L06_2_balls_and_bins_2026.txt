@@ -1,0 +1,315 @@
+• Concentration inequalities
+• Balls and bins
+          CSC4120 Design and Analysis of Algorithms
+                                                      1
+Motivation
+• Very general and abstract model: n balls, m bins.
+• Random choice of bin for each ball.
+• Study the stochastic properties of the bin occupancy process.
+• Applications: hashing, scheduling, …
+• First, we introduce some concentration bounds:
+    • If we know the mean of a r.v. 𝐸[𝑋], how to estimate the probability
+      that 𝑋 takes a larger value.
+    • In many cases we like to show that this can happen very infrequently.
+    • There are ways to get upper bounds for this probability. If these are
+      small enough, then we know that the actual probability is also small.
+
+                              SUTD ISTD 50.500 Analysis of Algorithms
+Concentration bounds
+• Bound the probability of a random variable to be far from its mean.
+• Use very simple information about the random variable.
+   • We only know the mean: μ = E[X] : Markov inequality.
+   • We know the mean μ = E[X] and the variance Ε[(X-μ)2] : Chebyshev's inequality.
+   • If X is the sum of iid bounded variables: Chernoff and Hoeffding’s bounds.
+
+
+
+          Markov
+                                                                            Chebyshev
+
+
+
+
+                                  SUTD ISTD 50.500 Analysis of Algorithms
+Markov’s inequality
+• Bounds to probability of an “unlikely” behaviour if we know the average behaviour
+  (i.e., execution time).                      need 𝑋 non-
+                                                                negative rv
+                                           𝐸 𝑋
+                           𝑃 𝑋≥𝑡 ≤            𝑡
+                                                   .
+• Example: 𝑋 = number of steps to find a solution.
+                                                                                               𝑃[𝑋 ≥ 𝑡]
+  Suppose we know that 𝐸 𝑋 = 𝑛2 steps.
+                                                                                𝜇       𝑡
+                                                                       2            2         𝑛2     1
+ Then the probability that we need more than 2𝑛 steps is 𝑃 𝑋 ≥ 2𝑛                           ≤ 2𝑛2 = 2.
+                      3     𝑛2   1
+ Similarly, 𝑃 𝑋 ≥ 𝑛       ≤ 𝑛3 = 𝑛.
+ Note: Markov’s inequality gives a “rough” bound, we may be able the get tighter
+ upper bounds by using other special tools (concentration bounds).
+
+                                      SUTD ISTD 50.500 Analysis of Algorithms
+Chebyshev's inequality
+
+                                  𝑃 𝑋 − 𝐸[𝑋] ≥ 𝑡
+
+
+
+                                        𝑉𝑎𝑟 𝑋              𝐸 𝑋−𝜇 2
+              𝑃 𝑋 − 𝐸[𝑋] ≥ 𝑡 ≤              𝑡2
+                                                      =           𝑡2
+                                                                           .
+• To use this, we need to know the variance of 𝑋 (not just the mean as in the case of
+  Markov’s inequality.
+• It gives a tighter bound as 𝑡 increases away from the mean (1/𝑡 2 instead of 1/𝑡).
+• When 𝑋 is a sum of iid rvs, Chernoff and Hoeffding’s bounds give exponential 𝑒 −𝑡
+  bounds (i.e., are more accurate to describe what happens), see slides in appendix .
+
+                                 SUTD ISTD 50.500 Analysis of Algorithms
+Hoeffding’s inequality
+• Let 𝑆𝑛 = 𝑥1 + ⋯ +𝑥𝑛 , where 𝑥𝑖 ∈ 0,1 and independent. Then
+                                                                                          −𝑡 2 /𝑛
+                                  𝑃 𝑆𝑛 − 𝐸[𝑆𝑛 ] > 𝑡 < 2𝑒                                             .
+                                                                                             𝑆𝑛
+• Equivalently: if 𝐸 𝑥𝑖 = 𝜇, 𝑆𝑛 /𝑛 = sample mean, 𝐸                                                      = 𝜇,
+                                                                                             𝑛
+                                             𝑆𝑛                                          −𝑎2 𝑛
+                                      𝑃           − 𝜇 > 𝛼 < 2𝑒                                   .
+                                              𝑛                                                          use above 𝑡 = 𝑛𝛼
+                                                                       𝑆𝑛
+• The probability that the sample average is outside the disk 𝜇 ± 𝛼 goes to
+                                          𝑛
+  zero exponentially fast as 𝑛 increases!
+                                    𝑥 +⋯+𝑥
+ How probable is the sample average 1      𝑛
+                                              to be away
+                                        𝑛
+ from the mean 𝜇 = 𝐸 𝑥𝑖 ?
+                                            𝑥 +⋯+𝑥𝑛
+ we know from the law of large numbers that 1        →𝜇
+                                                  𝑛
+
+                                             CSC4120 Design and Analysis of Algorithms
+                                                                                                                            7
+Balls and bins
+• Very general model: we throw 𝑛 balls to 𝑚 bins
+• Questions: average number of balls in a bin, average number of empty bins, average
+  number of collisions, how many balls on the average we need to throw to have all bins full,
+  average number of balls in the most loaded bin,…
+• Relation to hashing: we assume that the hash function distributes the 𝑛 keys (balls)
+  randomly over the 𝑚 locations (bins) of the hash table (SUHA).
+• Relation to job scheduling: we have 𝑛 jobs and 𝑚 machines and must assign jobs (balls) to
+  these machines (bins). Assume 𝑚 = 𝑛
+    • Case of no information: randomly assign jobs to machines using a hash function.
+      Worse load of a machine = log 𝑛 / log log 𝑛 whp.
+    • Case of “little” information: The “power of two choice” phenomenon: for each job,
+      choose randomly two machines (i.e., use 2 hash functions) and assign the job to the
+      less loaded machine between the two. Then worse load = log log 𝑛 / log log log 𝑛 whp.
+
+                                    SUTD 50.500 Analysis of Algorithms
+Simple problems for n balls and m bins
+• 𝐸 𝑋𝑖 : expected number of balls in bin 𝑖.                                       𝐸1𝐴
+      𝑋𝑖𝑘 = 1 ball 𝑘 goes to bin 𝑖 , 𝑋𝑖 = σ𝑘 𝑋𝑖𝑘 .                                 = 1𝑃 𝐴 + 0𝑃 𝐴𝑐
+                                                                              𝑛    = 1𝑃 𝐴
+      𝐸 𝑋𝑖 = 𝐸 σ𝑘 𝑋𝑖𝑘 = σ𝑘 𝐸[𝑋𝑖𝑘 ] = 𝑛𝐸 𝑋𝑖1 = 𝑚.
+• 𝐸 𝑍 : expected number of empty bins.
+      𝑍𝑖 = 1 bin 𝑖 is empty , 𝑍 = σ𝑖=1,…,𝑚 𝑍𝑖 .
+                                                                1 𝑛
+      𝐸 𝑍𝑖 = 𝑃 no ball goes to bin 𝑖 = 1 − 𝑚                              .
+                                                           1 𝑛
+      𝐸 𝑍 = 𝐸 σ𝑖 𝑍𝑖 = 𝑚𝐸 𝑍1 = 𝑚 1 − 𝑚                              .
+                                             1
+If 𝑚 = 𝑛 and 𝑛 is large, then 𝐸 𝑍 ≈ 𝑚 𝑒.
+
+
+                                SUTD ISTD 50.500 Analysis of Algorithms
+The birthday paradox
+Find the expected number of collisions.
+• Collision between 𝑖, 𝑗 where 𝑖 ≠ 𝑗: 𝑋𝑖𝑗 = 1 balls 𝑖, 𝑗 go in the same bin .
+• Number of collisions: 𝑋 = σ𝑖<𝑗 𝑋𝑖𝑗 (we require 𝑖 ≠ 𝑗 and we count once 𝑋𝑖𝑗 and 𝑋𝑗𝑖 ).
+• Note that 𝐸 𝑋𝑖𝑗 = 1/𝑚. Hence
+                              1                                𝑛       1
+      𝐸 𝑋 = σ𝑖<𝑗 𝐸[𝑋𝑖𝑗 ] =    𝑚
+                                # of pairs 𝑖, 𝑗 in the sum = 𝑚 2
+                                                                 .
+• Birthday question: if balls are people and bins are days of the year, how many people
+  we need to have average number of “birthday collisions” = 1? (i.e., on the average
+  there is one pair of people having bday on the same day).
+                    1
+• Solution: 𝐸 𝑋 = 365 𝑛2 = 1, solve for 𝑛. We need 𝑛 = 28.
+                                                       23.
+
+
+                                  SUTD 50.500 Analysis of Algorithms
+Expected time until all bins are full
+             𝑋1        𝑋2                                  𝑋𝑖                    𝑋𝑚
+
+
+        0         1         2                  i-1                   i                m
+
+
+
+• 𝑋𝑖 = # of balls added between the time when there are 𝑖 − 1 full bins until there
+  are 𝑖 full bins.
+                                                       𝑚−(𝑖−1)
+• Prob of success (get an empty bin) = 𝑝𝑖 =                     𝑚
+                                                                         .
+                                                      1
+• Expected number of trials until success = 𝑝 = 𝐸[𝑋𝑖 ].
+                                                       𝑖
+• Total number of balls 𝑋 until all 𝑚 bins have at least a ball: 𝑋 = 𝑋1 + 𝑋2 + ⋯ + 𝑋𝑚 .
+                                              𝑚                              1
+• 𝐸 𝑋 = σ𝑖=1,…,𝑚 𝐸[𝑋𝑖 ] = σ𝑖=1,…,𝑚 𝑚−(𝑖−1) = 𝑚 σ𝑗=1,…,𝑚 𝑗 ≈ 𝑚 log 𝑚.
+
+                                 SUTD ISTD 50.500 Analysis of Algorithms
+The max-load process                                                                                𝐿
+• Suppose 𝑛 = 𝑚.
+• 𝐿 = max load = max # of balls in any of the bins.
+                        ln 𝑛                                                           1
+• Proposition: 𝐿 = 𝑂 ln ln 𝑛 whp: with probability > 1 − 𝑛2 .
+          ln 𝑛
+• 𝐿 = 𝑂 ln ln 𝑛 holds in “almost all” experiments for large 𝑛.
+                               ln 𝑛
+• Stronger than 𝐸 𝐿 = 𝑂 ln ln 𝑛 .                                          whp: “with very high probability”, i.e.,
+                                                                            with probability that asymptotically
+                                                                                                        1
+                                                                            tends “fast” to 1, like 1 − 𝑐 , 𝑐 ≥ 1.
+                                                                                                        𝑛
+
+
+
+                                                                                               ln ln 𝑛: very slow…
+• We break the proof in three lemmas.
+
+                                      SUTD 50.500 Analysis of Algorithms
+                                                                                             bin 𝑖
+                                                      1 𝑘                                        ?             ?             ?
+                                                  𝑛
+Lemma 1: Pr{bin 𝑖 has ≥ 𝑘 balls} ≤                𝑘   𝑛
+                                                             .                          𝐴1           𝐴2                          𝐴3
+                                                          probability that bin 𝑖 contains
+                                                                                            set of three balls
+                            union over all possible        a specific combinations of 𝑘
+                            combinations of 𝑘 balls           balls out of the 𝑛 balls                             𝐴2 r, b
+                                                                                                  r, y 𝐴
+                                                            (possibly with other balls)                  1
+                                                                                                               𝐴3 b, y
+• Example: set of 3 balls {red, yellow, blue}.
+                                                          bin 𝑖 has ≥ 2 balls = 𝐴1 ∪ 𝐴2 ∪ 𝐴3
+• Event 𝐸 = {bin 𝑖 has ≥ 2 balls}. not exclusively
+• 𝐸 = balls red and blue are in bin 𝑖 ∪ balls red and yellow are in bin 𝑖 ∪
+   balls yellow and blue are in bin 𝑖 = 𝐴1 ∪ 𝐴2 ∪ 𝐴3 .
+• This is because every time 𝐸 is True it implies 𝐴1 ∪ 𝐴2 ∪ 𝐴3 , and the reverse also
+  holds, i.e., 𝐴1 ∪ 𝐴2 ∪ 𝐴3 implies 𝐸.
+• Hence Pr 𝐸 = Pr[𝐴1 ∪ 𝐴2 ∪ 𝐴3 ] ≤ Pr 𝐴1 + Pr 𝐴2 + Pr 𝐴3 (since not disjoint).
+                                                                               1 2            3      1 2
+                                                  = 3 Pr 𝐴1 = 3 3                      =      2      3
+                                                                                                           .
+                                   4 ln 𝑛                      1                               we use the “death bed” inequality
+Lemma 2: Pr bin 𝑖 has ≥                        balls <              .                                 𝑥
+                                                                                                         𝑦
+                                                                                                              𝑥      𝑒𝑥
+                                                                                                                         𝑦
+                                  ln ln 𝑛                      𝑛3
+                                                                                                           ≤      ≤
+Proof:                                                                                                𝑦       𝑦       𝑦
+
+                                                    𝑛       1 𝑘              𝑒𝑛 𝑘        1 𝑘       𝑒 𝑘
+Step 1: Pr{bin 𝑖 has ≥ 𝑘 balls} ≤                   𝑘
+                                                                        ≤                      =         .   (*)
+                                                           𝑛                  𝑘          𝑛         𝑘
+                       4ln 𝑛
+Step 2: choose 𝑘 =               , using (*) we obtain
+                       ln ln 𝑛
+                                                             4 ln 𝑛
+                   4 ln 𝑛                          𝑒
+• Pr bin 𝑖 has ≥                balls ≤           4 ln 𝑛
+                                                            ln ln 𝑛
+                                                                                 % using (*)
+                   ln ln 𝑛
+                                                 ln ln 𝑛
+                                    4 ln 𝑛
+                       ln ln 𝑛     ln ln 𝑛                                       𝑒
+                <                                            % since < 1
+                         ln 𝑛                                                  4
+                             4 ln 𝑛            ln ln 𝑛                      4 ln 𝑛
+                = exp(                    ln             ) = exp(                    (ln ln ln 𝑛 − ln ln 𝑛))
+                                ln ln 𝑛         ln 𝑛                 ln ln 𝑛
+                                                             ln ln ln 𝑛
+                   = exp(−4 ln 𝑛 + 4 ln 𝑛                                    )
+                                                               ln ln 𝑛
+                   < exp(−3 ln 𝑛)                          % since 4 lnlnlnlnln𝑛𝑛 can become arbitrarily small for large 𝑛.
+                        1
+                   =        .
+                       𝑛3                           SUTD 50.500 Analysis of Algorithms
+                                    4 log 𝑛                          1
+Lemma 3: Pr{some bin has ≥ log log 𝑛 balls} ≤ 𝑛2.
+We use the union bound:                               we use union bound since the event is the union of all events for each specific bin
+
+                      4 log 𝑛                                                      4 log 𝑛                            1         1
+Pr{some bin has ≥ log log 𝑛 balls} ≤ σ𝑖 Pr{bin 𝑖 has ≥ log log 𝑛 balls} < 𝑛 𝑛3 = 𝑛2.
+
+                                1                                            4 log 𝑛
+• Same as: with prob > 1 − 𝑛2 no bin has more than log log 𝑛 balls,
+                       1                                                      log 𝑛
+• Or, with prob > 1 − 𝑛2 the most loaded bin has 𝑂(log log 𝑛 ) balls.
+• This complete the proof of the Proposition.
+
+                                                                                                                     log 𝑛
+• One can prove using similar arguments that the most loaded bin has Ω(log log 𝑛 )
+                           1
+ balls with prob > 1 − 𝑛2.
+                                      SUTD 50.500 Analysis of Algorithms
+The max-load process                                                              𝐿
+• Suppose 𝑛 = 𝑚
+• 𝐿 = max load = max # of balls in any of the bins
+                           ln 𝑛                                               1
+• Proposition: 𝐿 = 𝑂 ln ln 𝑛 whp: with probability > 1 − 𝑛2 .
+          ln 𝑛
+• 𝐿 = 𝑂 ln ln 𝑛 holds in “almost all” experiments for large 𝑛.
+                                  ln 𝑛
+• Stronger than 𝐸 𝐿 = 𝑂 ln ln 𝑛 .
+                                                           ln 𝑛
+• We can actually prove that whp 𝐿 = Θ ln ln 𝑛 .
+• With “choice of two”, i.e., “minimum” load balancing:
+                 ln ln 𝑛
+      𝐿 = Θ ln ln ln 𝑛
+
+
+                                         SUTD 50.500 Analysis of Algorithms
+The power of two choices instead of one
+                                                                         ln 𝑛
+• The Proposition says that the most loaded bin is “about”                        .
+                                                                        ln ln 𝑛
+• Let’s suppose that before inserting a ball, we pick two bins at random
+  and chose the less loaded one.
+• How is the distribution of the maximum load in this system?
+                 ln 𝑛
+• It drops to             .
+                ln ln 𝑛
+• A small amount of information makes a big difference in load balancing!
+• Hashing: use 2 hash functions instead of one, choose the slot with the
+  smallest number of collisions.
+• Can we do insertions in 𝑂 1 ?
+
+                              SUTD ISTD 50.500 Analysis of Algorithms
+Summary
+• Balls that are thrown in bins uniformly at random is a great model to
+  study many practical situations like hashing and job scheduling.
+• If 𝑚 = 𝑛 or more generally, when the number of bins grows at the same
+  rate as the number of balls, we see that the worse case load is rarely
+                               ln 𝑛
+  higher than few times               . This is not an average case result but holds
+                              ln ln 𝑛
+  for any experiment!
+• If we are allowed to check two random bins before placing a ball, this
+                ln ln 𝑛
+  reduces to             . Little information about the state of the system can
+              ln ln ln 𝑛
+  greatly help in balancing system load!
+
+
+                                  CSC4120 Design and Analysis of Algorithms
+                                                                                       18
+

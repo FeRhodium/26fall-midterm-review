@@ -1,0 +1,323 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Shortest Paths Stepper</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"><style>
+/* Layout: one narrow reading column, three stacked stepper sections, each a grid of small graph snapshots that grows as the student reveals steps. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --line:#d8dde5; --fg:#1a212c; --mute:#566173; --chip:#edf0f4;
+  --accent:#1f6fd1; --warn-bg:#fcefcf; --warn-line:#d39a1d; --warn-fg:#6a4806;
+  --ok-bg:#ddf2e3; --ok-line:#3b9559; --ok-fg:#1c5732; --bad:#c43b36;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151b; --surface:#1a2029; --line:#2d3643; --fg:#e7ebf1; --mute:#98a3b3; --chip:#232b36;
+  --accent:#5da3f6; --warn-bg:#3a2f12; --warn-line:#c28d1f; --warn-fg:#f1d28a;
+  --ok-bg:#183626; --ok-line:#3f9c60; --ok-fg:#a7e4ba; --bad:#ef6e69; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151b; --surface:#1a2029; --line:#2d3643; --fg:#e7ebf1; --mute:#98a3b3; --chip:#232b36;
+  --accent:#5da3f6; --warn-bg:#3a2f12; --warn-line:#c28d1f; --warn-fg:#f1d28a;
+  --ok-bg:#183626; --ok-line:#3f9c60; --ok-fg:#a7e4ba; --bad:#ef6e69; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
+  padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+h1{font-size:26px;font-weight:600;margin:0;text-wrap:balance}
+h2{font-size:20px;font-weight:600;margin:0 0 4px;text-wrap:balance}
+p{margin:0}
+.mute{color:var(--mute);font-size:14px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+nav a{font-size:14px;color:var(--accent);text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:5px 12px;border-radius:999px}
+nav a:hover{border-color:var(--accent)}
+.howto{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:0 12px 12px 0;padding:10px 14px;font-size:14px}
+.howto ol{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:2px}
+.empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:12px;padding:16px;font-size:14px;color:var(--mute)}
+.nb{display:flex;flex-direction:column;align-items:center;gap:0;min-width:72px;line-height:1.25;padding:6px 10px}
+.nb b{font-size:17px;font-weight:600}
+.nb span{font-size:11px;color:var(--mute)}
+.nb.done{border-color:var(--accent)}
+.nb.done b{color:var(--accent)}
+.slot{border:1px dashed var(--line);border-radius:12px;padding:16px;font-size:13px;color:var(--mute);display:flex;align-items:center;justify-content:center;text-align:center;min-height:150px;line-height:1.5}
+.graphbox{display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.graphbox svg{width:min(100%,340px);height:auto}
+.graphbox .txt{flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:13px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);background:var(--chip);color:var(--mute)}
+.chip.y{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-fg)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+button{font:inherit;font-size:14px;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cnt{font-size:13px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.pn{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px 10px;min-width:0}
+.pn.cur{border:2px solid var(--accent);padding:7px 9px 9px}
+.pn svg{width:100%;height:auto;display:block}
+.cap{font-size:13px;line-height:1.45;color:var(--mute)}
+.cap b{font-weight:600;color:var(--fg)}
+.ed{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.q{font-family:var(--mono);font-size:12px;color:var(--mute);margin-top:6px;overflow-wrap:anywhere}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:50%;display:inline-block;border:1.5px solid var(--line)}
+.sw.imp{background:var(--warn-bg);border-color:var(--warn-line)}.sw.fin{background:var(--ok-bg);border-color:var(--ok-line)}
+.sw.ext{border-color:var(--accent);border-width:3px}.ln{width:18px;height:0;border-top:3px solid var(--accent);display:inline-block}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;margin-top:10px}
+.note .bad{color:var(--bad);font-weight:600}
+table.set{border-collapse:separate;border-spacing:4px;font-family:var(--mono);font-size:14px;margin-top:8px}
+table.set th{font-family:var(--sans);font-weight:500;color:var(--mute);font-size:12px;padding:2px 8px}
+table.set td{padding:5px 10px;text-align:center;border-radius:6px;border:1px solid var(--line);background:var(--surface);min-width:44px}
+table.set td.n{border:none;background:none;font-weight:500;text-align:left}
+table.set td.f{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-fg);font-weight:500}
+table.set td.k{color:var(--mute);background:var(--chip)}
+.scroll{overflow-x:auto}
+svg text{font-family:var(--sans)}
+.e{stroke:var(--line);stroke-width:1.4;fill:none}
+.e.pi{stroke:var(--accent);stroke-width:2.6}
+.e.rel{stroke:var(--warn-line);stroke-width:3}
+.e.neg{stroke:var(--bad);stroke-width:2.2}
+.w{font-size:12px;fill:var(--mute)}
+.w.negw{fill:var(--bad);font-weight:600;font-size:13px}
+.nd{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.nd.imp{fill:var(--warn-bg);stroke:var(--warn-line);stroke-width:1.8}
+.nd.fin{fill:var(--ok-bg);stroke:var(--ok-line);stroke-width:1.2}
+.nd.ext{stroke:var(--accent);stroke-width:3.2}
+.nd.src{stroke:var(--fg);stroke-width:1.5}
+.nm{font-size:12px;fill:var(--mute)}
+.dv{font-size:14px;font-weight:600;fill:var(--fg);font-family:var(--mono)}
+</style><style>html{color-scheme:light}@media (prefers-color-scheme: dark){html{color-scheme:dark}}body{margin:0}</style></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs></svg>
+
+<div class="wrap">
+<header>
+  <h1>Shortest paths stepper</h1>
+  <div class="howto"><b>How to use this page with the chat</b>
+    <ol><li><b>Start by doing nothing here.</b> The chat will tell you when to press a button. The first time will be "press button 1".</li><li>The chat asks you a question about the graph below. Work it out yourself and answer it in the chat.</li>
+    <li>Only then, press the numbered button the chat tells you to press (for example "button 3"). That picture appears in its place, next to the earlier ones, so you can see what changed.</li>
+    <li>Do not press other buttons ahead of the chat: each picture shows the answer to a step.</li></ol></div>
+  <div class="howto"><b>How to read the pictures (please read this before you start)</b>
+    <div style="margin-top:6px">In every picture each circle shows the node name and, below it, the node's current distance estimate d (∞ means no path found yet). Blue arrows are the current predecessor pointers π.</div>
+    <div class="legend"><b style="color:var(--fg);font-weight:600">Bellman-Ford:</b><span><i class="sw imp"></i>amber: d improved in this round</span></div>
+    <div class="legend"><b style="color:var(--fg);font-weight:600">Dijkstra:</b><span><i class="sw" style="background:var(--surface)"></i>white: not reached, d = ∞</span><span><i class="sw imp"></i>amber: open, a distance is found, still waiting in Q</span><span><i class="sw fin"></i>green: finished, in S</span><span><i class="sw ext"></i>blue ring: just extracted</span></div>
+  </div>
+  
+  <div class="graphbox">
+    <div id="base"></div>
+    <div class="txt">
+      <div><b style="font-weight:600">The graph.</b> Source node s. Edge weights are written on the edges.</div>
+      <div class="chips" id="edgelist"></div>
+      <div class="mute">Dijkstra uses this graph exactly as drawn. Bellman-Ford adds one extra edge only in the section on negative edges.</div>
+    </div>
+  </div>
+</header>
+
+<section id="bellman-ford" aria-labelledby="h-bf">
+  <h2 id="h-bf">Bellman-Ford: one round at a time</h2>
+  <p class="mute">One round = relax all 7 edges once, in this order (chosen arbitrarily, the same every round). Six numbered pictures: 1 is the start state, 2 to 6 are rounds 1 to 5.</p>
+  <div class="chips" id="order" style="margin-top:6px"></div>
+  <div class="bar" id="bf-btns" role="group" aria-label="Bellman-Ford pictures"></div>
+  <div class="bar"><button id="bf-all">Show all</button><button id="bf-reset">Reset</button><span class="cnt" id="bf-cnt"></span></div>
+  <div class="grid" id="bf-grid"></div>
+  <div class="legend"><span><i class="sw imp"></i>distance just improved</span><span><i class="ln"></i>current predecessor (π)</span><span class="chip y">c→d 8</span><span>= this relaxation improved a distance</span></div>
+  <div class="bar"><button id="set-btn">Show when each node settles</button></div>
+  <div class="scroll" id="set-box" hidden></div>
+</section>
+
+<section id="negative-edge" aria-labelledby="h-neg">
+  <h2 id="h-neg">A negative edge</h2>
+  <p class="mute">The final picture of the run, with one extra edge d→b of weight −12. Press the button to relax it.</p>
+  <div class="bar"><button class="primary" id="neg-go">Relax d→b</button><button id="neg-reset">Reset</button></div>
+  <div style="max-width:340px" class="pn cur" id="neg-pn"></div>
+  <div class="note" id="neg-note">Final values: s = 0, b = 2, a = 5, c = 7, d = 8. Does the edge d→b still improve anything?</div>
+</section>
+
+<section id="dijkstra" aria-labelledby="h-dj">
+  <h2 id="h-dj">Dijkstra: one iteration at a time</h2>
+  <p class="mute">One iteration = extract the open node with the smallest d, move it into S, relax its outgoing edges. Six numbered pictures: 1 is the start state, 2 to 6 are iterations 1 to 5.</p>
+  <div class="graphbox"><div id="dj-graph"></div><div class="txt"><div><b style="font-weight:600">The graph again.</b> Same graph as above, source s, no negative edge.</div><div class="chips" id="dj-edgelist"></div></div></div>
+  <div class="bar" id="dj-btns" role="group" aria-label="Dijkstra pictures"></div>
+  <div class="bar"><button id="dj-all">Show all</button><button id="dj-reset">Reset</button><span class="cnt" id="dj-cnt"></span></div>
+  <div class="grid" id="dj-grid"></div>
+  <div class="legend"><span><i class="sw fin"></i>finished (in S)</span><span><i class="sw ext"></i>just extracted</span><span><i class="sw imp"></i>open: distance found, still waiting in Q</span><span><i class="ln"></i>current predecessor (π)</span></div>
+  <div class="bar"><button id="ord-btn">Show order of entry into S</button></div>
+  <div class="note" id="ord-box" hidden></div>
+</section>
+</div>
+
+<script>
+var POS={s:[95,22],b:[26,82],a:[164,82],c:[95,146],d:[196,146]};
+var OFF={sa:[12,-4],sb:[-12,-4],ba:[0,-7],bc:[-12,6],ac:[12,6],ad:[12,0],cd:[0,-8]};
+var W={sa:6,sb:2,ba:3,bc:9,ac:2,ad:8,cd:1};
+var ORD=["cd","ac","ad","ba","bc","sa","sb"];
+var NODES=["s","a","b","c","d"];
+var INF=Infinity;
+function fmt(x){return x===INF?"∞":String(x)}
+function copy(o){return Object.assign({},o)}
+
+function svg(st,o){
+  o=o||{};
+  var h='<svg viewBox="0 0 220 '+(o.neg?222:176)+'" role="img" aria-label="'+(o.label||"Graph state")+'">';
+  Object.keys(W).forEach(function(e){
+    var u=POS[e[0]],v=POS[e[1]],dx=v[0]-u[0],dy=v[1]-u[1],L=Math.sqrt(dx*dx+dy*dy),ux=dx/L,uy=dy/L;
+    var cls="e"+((st.p||{})[e[1]]===e[0]?" pi":"");
+    h+='<line class="'+cls+'" x1="'+(u[0]+ux*20)+'" y1="'+(u[1]+uy*20)+'" x2="'+(v[0]-ux*23)+'" y2="'+(v[1]-uy*23)+'" marker-end="url(#ah)"/>';
+  });
+  if(o.neg){
+    h+='<path class="e neg'+(o.negRel?' rel':'')+'" d="M196 166 C196 214, 26 214, 26 103" marker-end="url(#ah)"/>';
+    h+='<text class="w negw" x="111" y="203" text-anchor="middle" dominant-baseline="central">−12</text>';
+  }
+  Object.keys(W).forEach(function(e){
+    var u=POS[e[0]],v=POS[e[1]];
+    h+='<text class="w" x="'+((u[0]+v[0])/2+OFF[e][0])+'" y="'+((u[1]+v[1])/2+OFF[e][1])+'" text-anchor="middle" dominant-baseline="central">'+W[e]+'</text>';
+  });
+  NODES.forEach(function(k){
+    var cls="nd";
+    if(st.S){if(st.S.indexOf(k)>=0)cls+=" fin";else if(st.d[k]!==INF)cls+=" imp"}
+    else if(st.chg&&st.chg[k])cls+=" imp";
+    if(st.u===k)cls+=" ext";
+    if(o.plain&&k==="s")cls+=" src";
+    var x=POS[k][0],y=POS[k][1];
+    h+='<circle class="'+cls+'" cx="'+x+'" cy="'+y+'" r="19"/>';
+    if(o.plain){h+='<text class="dv" x="'+x+'" y="'+y+'" text-anchor="middle" dominant-baseline="central" style="font-family:var(--sans)">'+k+'</text>';}
+    else{
+      h+='<text class="nm" x="'+x+'" y="'+(y-6)+'" text-anchor="middle" dominant-baseline="central">'+k+'</text>';
+      h+='<text class="dv" x="'+x+'" y="'+(y+8)+'" text-anchor="middle" dominant-baseline="central">'+fmt(st.d[k])+'</text>';
+    }
+  });
+  return h+'</svg>';
+}
+
+document.getElementById("base").innerHTML=svg({p:{},d:{}},{plain:true,label:"The session graph"});
+document.getElementById("dj-graph").innerHTML=svg({p:{},d:{}},{plain:true,label:"The session graph, repeated for Dijkstra"});
+document.getElementById("dj-edgelist").innerHTML=Object.keys(W).map(function(e){return '<span class="chip">'+e[0]+'→'+e[1]+' '+W[e]+'</span>'}).join("");
+document.getElementById("edgelist").innerHTML=Object.keys(W).map(function(e){return '<span class="chip">'+e[0]+'→'+e[1]+' '+W[e]+'</span>'}).join("");
+document.getElementById("order").innerHTML=ORD.map(function(e,i){return '<span class="chip">'+(i+1)+': '+e[0]+'→'+e[1]+'</span>'}).join("");
+
+/* ---------- Bellman-Ford simulation ---------- */
+var bf=(function(){
+  var d={s:0,a:INF,b:INF,c:INF,d:INF},p={},R=[{t:"Start",d:copy(d),p:{},chg:{},ed:[],lab:"d = ∞ except s"}];
+  for(var r=1;r<=5;r++){
+    var chg={},ed=[];
+    ORD.forEach(function(e){
+      var u=e[0],v=e[1],ok=d[u]+W[e]<d[v];
+      if(ok){d[v]=d[u]+W[e];p[v]=u;chg[v]=1}
+      ed.push({e:e,ok:ok,v:d[v]});
+    });
+    var n=Object.keys(chg).length;
+    R.push({t:"After round "+r,d:copy(d),p:copy(p),chg:chg,ed:ed,lab:n?(n+" improved"):"nothing improves"});
+  }
+  return R;
+})();
+var bfOn=[],bfLast=-1;
+function bfPanel(i,cur){
+  var st=bf[i];
+  var chips=st.ed.map(function(x){return '<span class="chip'+(x.ok?' y':'')+'">'+x.e[0]+'→'+x.e[1]+(x.ok?' '+x.v:'')+'</span>'}).join("");
+  return '<div class="pn'+(cur?' cur':'')+'">'+svg(st,{label:st.t})+'<div class="cap"><b>'+st.t+'</b> · '+st.lab+'</div>'+(i?'<div class="ed">'+chips+'</div>':'')+'</div>';
+}
+function bfBtns(){
+  var h="";
+  for(var i=0;i<bf.length;i++)h+='<button class="nb'+(bfOn[i]?' done':'')+'" onclick="bfPress('+i+')" aria-label="Button '+(i+1)+': '+(i?'round '+i:'start')+'"><b>'+(i+1)+'</b><span>'+(i?'Round '+i:'Start')+'</span></button>';
+  document.getElementById("bf-btns").innerHTML=h;
+}
+function bfRender(){
+  var h="",c=0;
+  for(var i=0;i<bf.length;i++){
+    if(bfOn[i]){h+=bfPanel(i,i===bfLast);c++}
+    else h+='<div class="slot"><div><b>Picture '+(i+1)+'</b><br>'+(i?'Round '+i:'Start state')+'<br>wait for the chat, then press button '+(i+1)+'</div></div>';
+  }
+  document.getElementById("bf-grid").innerHTML=h;
+  document.getElementById("bf-cnt").textContent=c+" of "+bf.length+" pictures shown";
+  bfBtns();
+}
+function bfPress(i){bfOn[i]=true;bfLast=i;bfRender()}
+document.getElementById("bf-all").onclick=function(){for(var i=0;i<bf.length;i++)bfOn[i]=true;bfLast=bf.length-1;bfRender()};
+document.getElementById("bf-reset").onclick=function(){bfOn=[];bfLast=-1;bfRender()};
+bfRender();
+
+document.getElementById("set-btn").onclick=function(){
+  var box=document.getElementById("set-box");
+  if(!box.hidden){box.hidden=true;this.textContent="Show when each node settles";return}
+  var fin=bf[bf.length-1].d,head='<tr><th></th><th>Start</th>',rows="";
+  for(var r=1;r<bf.length;r++)head+='<th>Round '+r+'</th>';
+  head+='</tr>';
+  ["b","a","c","d"].forEach(function(k){
+    var first=bf.length;
+    for(var i=bf.length-1;i>=0;i--){if(bf[i].d[k]===fin[k])first=i;else break}
+    rows+='<tr><td class="n">'+k+'</td>';
+    for(var i=0;i<bf.length;i++){
+      var c=i===first?"f":(i>first?"k":"");
+      rows+='<td'+(c?' class="'+c+'"':'')+'>'+fmt(bf[i].d[k])+'</td>';
+    }
+    rows+='</tr>';
+  });
+  box.innerHTML='<table class="set"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table><div class="mute" style="margin-top:4px">Green = the round where the node reaches its final distance. Grey = unchanged afterwards.</div>';
+  box.hidden=false;this.textContent="Hide";
+};
+
+/* ---------- Negative edge ---------- */
+var finalBF=bf[bf.length-1];
+function negRender(relaxed){
+  var st={d:copy(finalBF.d),p:copy(finalBF.p),chg:{}};
+  if(relaxed){st.d.b=-4;st.chg.b=1}
+  document.getElementById("neg-pn").innerHTML=svg(st,{neg:true,negRel:relaxed,label:"Final state with a negative edge from d to b"})+'<div class="cap"><b>'+(relaxed?'After relax(d,b)':'Final values')+'</b> · extra edge d→b = −12</div>';
+  document.getElementById("neg-note").innerHTML=relaxed
+   ?'8 + (−12) = −4 &lt; 2, so b.d drops to −4 even after the last round. That feeds a (−4 + 3 = −1), then c (−1 + 2 = 1), then d (1 + 1 = 2), and d→b improves b again. The cycle b → a → c → d → b weighs 3 + 2 + 1 − 12 = <span class="bad">−6</span>: a <b style="font-weight:600">negative cycle</b>. Each lap lowers everything by 6, so there is no cheapest route.'
+   :'Final values: s = 0, b = 2, a = 5, c = 7, d = 8. Does the edge d→b still improve anything?';
+  document.getElementById("neg-go").disabled=relaxed;
+}
+document.getElementById("neg-go").onclick=function(){negRender(true)};
+document.getElementById("neg-reset").onclick=function(){negRender(false)};
+negRender(false);
+
+/* ---------- Dijkstra simulation ---------- */
+var dj=(function(){
+  var d={s:0,a:INF,b:INF,c:INF,d:INF},p={},S=[];
+  function qs(){return NODES.filter(function(k){return S.indexOf(k)<0}).sort(function(x,y){return d[x]-d[y]||(x<y?-1:1)}).map(function(k){return k+":"+fmt(d[k])}).join(", ")}
+  var R=[{t:"Start",d:copy(d),p:{},S:[],u:null,chg:{},ed:[],q:qs()}];
+  for(var it=1;it<=5;it++){
+    var u=NODES.filter(function(k){return S.indexOf(k)<0}).sort(function(x,y){return d[x]-d[y]||(x<y?-1:1)})[0];
+    S.push(u);
+    var chg={},ed=[];
+    Object.keys(W).filter(function(e){return e[0]===u}).forEach(function(e){
+      var v=e[1],ok=d[u]+W[e]<d[v];
+      if(ok){d[v]=d[u]+W[e];p[v]=u;chg[v]=1}
+      ed.push({e:e,ok:ok,v:d[v]});
+    });
+    R.push({t:"Iteration "+it+": extract "+u+" ("+d[u]+")",d:copy(d),p:copy(p),S:S.slice(),u:u,chg:chg,ed:ed,q:qs()});
+  }
+  return R;
+})();
+var djOn=[],djLast=-1;
+function djPanel(i,cur){
+  var st=dj[i];
+  var chips=st.ed.length?st.ed.map(function(x){return '<span class="chip'+(x.ok?' y':'')+'">relax '+x.e[0]+'→'+x.e[1]+(x.ok?' → '+x.v:': no change')+'</span>'}).join(""):(i?'<span class="chip">no outgoing edges</span>':'');
+  return '<div class="pn'+(cur?' cur':'')+'">'+svg(st,{label:st.t})+'<div class="cap"><b>'+st.t+'</b></div><div class="ed">'+chips+'</div><div class="q">S = {'+st.S.join(", ")+'}<br>Q = {'+st.q+'}</div></div>';
+}
+function djBtns(){
+  var h="";
+  for(var i=0;i<dj.length;i++)h+='<button class="nb'+(djOn[i]?' done':'')+'" onclick="djPress('+i+')" aria-label="Button '+(i+1)+': '+(i?'iteration '+i:'start')+'"><b>'+(i+1)+'</b><span>'+(i?'Iteration '+i:'Start')+'</span></button>';
+  document.getElementById("dj-btns").innerHTML=h;
+}
+function djRender(){
+  var h="",c=0;
+  for(var i=0;i<dj.length;i++){
+    if(djOn[i]){h+=djPanel(i,i===djLast);c++}
+    else h+='<div class="slot"><div><b>Picture '+(i+1)+'</b><br>'+(i?'Iteration '+i:'Start state')+'<br>wait for the chat, then press button '+(i+1)+'</div></div>';
+  }
+  document.getElementById("dj-grid").innerHTML=h;
+  document.getElementById("dj-cnt").textContent=c+" of "+dj.length+" pictures shown";
+  djBtns();
+}
+function djPress(i){djOn[i]=true;djLast=i;djRender()}
+document.getElementById("dj-all").onclick=function(){for(var i=0;i<dj.length;i++)djOn[i]=true;djLast=dj.length-1;djRender()};
+document.getElementById("dj-reset").onclick=function(){djOn=[];djLast=-1;djRender()};
+djRender();
+
+document.getElementById("ord-btn").onclick=function(){
+  var box=document.getElementById("ord-box");
+  if(!box.hidden){box.hidden=true;this.textContent="Show order of entry into S";return}
+  var last=dj[dj.length-1];
+  box.innerHTML='Entered S in this order: <b style="font-weight:600;font-family:var(--mono)">'+last.S.join(", ")+'</b> with final distances <b style="font-weight:600;font-family:var(--mono)">'+last.S.map(function(k){return last.d[k]}).join(", ")+'</b>. Dijkstra builds the shortest path tree inside S, inserting nodes in order of their distance from s.';
+  box.hidden=false;this.textContent="Hide";
+};
+</script>
+</body></html>

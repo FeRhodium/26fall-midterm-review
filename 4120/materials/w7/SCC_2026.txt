@@ -1,0 +1,198 @@
+Analysis of graphs
+• Strongly connected components
+
+          CSC4120 Design and Analysis of Algorithms
+                                                      1
+Objective
+• Decompose a graph in sub-graphs where nodes are fully
+  communicating.
+• Many applications to random walks, etc.
+• Kosaraju’s algorithm.
+• DPV Chapter 3.4.
+• CLRS Ch 22.5.
+• Play with animations (also for DFS and BFS)
+  https://visualgo.net/en/dfsbfs.
+
+
+                        SUTD ISTD 50.004 Intro to Algorithms
+Strongly connected components                                                  maximal: cannot add more vertices
+
+• Strongly connected component: maximal set of vertices 𝐶 ⊆ 𝑉 such that
+  every pair of states communicate.
+   • for every pair of vertices 𝑢, 𝑣 ∈ 𝐶 , we have both 𝑢 ↝ 𝑣 and 𝑣 ↝ 𝑢.
+                                                                                                  𝑢 ↝ 𝑣:
+                                                                                                 there is a
+                                                                                                 path from
+                                                                                                   𝑢 to 𝑣
+
+
+                                                                 𝑆𝐶𝐶2         𝑆𝐶𝐶4
+                                                𝑆𝐶𝐶1
+
+         𝐺
+                                                                𝑆𝐶𝐶3
+                                                                                     𝑆𝐶𝐶5
+
+
+
+
+                                  CSC4120 Design and Analysis of Algorithms
+                                                                                                              3
+The graph of SCCs is a DAG
+                                                    𝐺 𝑆𝐶𝐶 : graph of SCCs
+                                                                                       “sink” SCC: no
+                                                                                       outgoing edges
+                                                                                         in the DAG
+          𝐺
+
+Collapses to
+   a DAG                                                           topological order
+                                                    𝐴 < 𝐵𝐸 < 𝐷 < 𝐶𝐹 < 𝐺𝐻𝐼𝐽𝐾𝐿
+
+
+Property: Consider any topological order for the SCCs, e.g.,: 𝑆𝐶𝐶1 < ⋯ < 𝑆𝐶𝐶𝑘−1 < 𝑆𝐶𝐶𝑘 .
+Then, 𝑆𝐶𝐶𝑘 is a sink (no outgoing edges). If we remove 𝑆𝐶𝐶𝑘 , then 𝑆𝑆𝐶𝑘−1 becomes a sink.
+                                  CSC4120 Design and Analysis of Algorithms
+                                                                                                        4
+Properties of any DFS
+Property of DAGs:                       finishing time
+
+• If there is an edge 𝑢 → 𝑣, then 𝑝𝑜𝑠𝑡 𝑢 > 𝑝𝑜𝑠𝑡 𝑣 .
+Property of any graph 𝐺: Given SCCs 𝐶, 𝐶 ′ ,                𝐴 < 𝐵𝐸 < 𝐷 < 𝐶𝐹 < 𝐺𝐻𝐼𝐽𝐾𝐿
+
+• If there is an edge 𝐶 → 𝐶 ′ , then 𝑝𝑜𝑠𝑡 𝐶 > 𝑝𝑜𝑠𝑡 𝐶 ′ , where 𝑝𝑜𝑠𝑡 𝐶 = largest post
+  time of nodes in 𝐶.
+Corollary:
+• We do a DFS on 𝐺, this defines an ordering >𝐷𝐹 on 𝑉 according to decreasing post
+  times.
+                    ← highest post time
+• If we order 𝑢1 > 𝑢2 > 𝑢3 > ⋯ > 𝑢𝑛 according to >𝐷𝐹 , then 𝑢1 ∈ 𝑆𝐶𝐶1 = source SCC.
+• We consider the graph 𝐺 ′ = 𝐺 − 𝑆𝐶𝐶1 . if the remaining nodes are 𝑢1′ > 𝑢2′ > 𝑢3′ > ⋯
+  according to >𝐷𝐹 , then 𝑢1′ ∈ 𝑆𝐶𝐶2 = source SCC of the SCC DAG of 𝐺 ′ .
+
+                                 CSC4120 Design and Analysis of Algorithms
+                                                                                  5
+  Proof: Apply the white path theorem.                                                During the DFS,
+  Consider two cases:                                                                 𝐶 is visited first
+
+                                      𝐶                                                                            𝐶
+
+
+                                                                                             first visited state
+
+
+
+
+                first visited state
+During the DFS, 𝐶 ′
+  is visited first
+
+
+
+
+                        𝐶′                                                       𝐶′
+
+                                          CSC4120 Design and Analysis of Algorithms
+                                                                                                                       6
+Example                                                                       Any DFS will create post
+                                                                              times that satisfy these
+                                                                                    properties
+             𝑝𝑜𝑠𝑡 𝐴 > 𝑝𝑜𝑠𝑡(𝐵𝐸)
+                                        𝑝𝑜𝑠𝑡(𝐵𝐸) > 𝑝𝑜𝑠𝑡(𝐶𝐹)
+
+
+          𝑝𝑜𝑠𝑡 𝐵𝐸 > 𝑝𝑜𝑠𝑡(𝐷)
+
+
+                                             𝑝𝑜𝑠𝑡(𝐶𝐹) > 𝑝𝑜𝑠𝑡(𝐺𝐻𝐼𝐽𝐾𝐿)
+           𝑝𝑜𝑠𝑡(𝐵𝐸) > 𝑝𝑜𝑠𝑡(𝐺𝐻𝐼𝐽𝐾𝐿)
+
+
+
+
+                                                                      ← highest post time
+                                                            𝐴 > 𝐵𝐸 > 𝐶𝐸 > 𝐷 > 𝐺𝐻𝐼𝐽𝐾𝐿
+                                                                   A source SCC has the node with the
+                                                                     largest finishing time of the DFS
+                       CSC4120 Design and Analysis of Algorithms
+                                                                                                         7
+ Basic idea
+• Oracle-based algorithm:
+• The oracle can always find a node in a sink SCC of 𝐺.
+• Algorithm: Ask the oracle for a node 𝑢1 in some sink 𝑆𝐶𝐶 of 𝐺;
+  run 𝐷𝐹𝑆(𝐺, 𝑢1 ) to find the nodes of this 𝑆𝐶𝐶 and extract them
+  from 𝐺 to get the new graph 𝐺 ′ ; repeat this on 𝐺 ′ , etc, until the
+  graph is empty.
+• Example: Oracle gives node 𝐽 ∈ 𝐺𝐻𝐼𝐽𝐾𝐿, run DFS from 𝐽, find and
+  take out 𝐺𝐻𝐼𝐽𝐾𝐿 from the graph. Next, in the new graph the
+  oracle gives us node 𝐶 ∈ 𝐶𝐹, we take out 𝐶𝐹, etc.
+
+
+• But we don’t have an oracle to help us. Ideas how to get nodes
+  in sink SCCs?
+
+                                       CSC4120 Design and Analysis of Algorithms
+                                                                                   8
+ Basic idea
+• Instead of the oracle: reverse the direction of the edges: sink
+  SCCs become source SCCs!
+    • Run a DFS to compute post values in the reversed graph.
+      The highest post value is a node in a source SCC of the
+      reversed graph ⇒ sink SCC of the original graph.
+• Algorithm idea: Run DFS in the original graph to find the
+  SCCs one by one by starting on nodes with the highest post
+  value from the DFS on the reversed graph.
+
+                                                                                 The reverse
+                                                                                 graph 𝐺 𝑇
+
+
+                                     CSC4120 Design and Analysis of Algorithms
+                                                                                           9
+                 Step 1: do DFS on
+                 reversed graph to
+                 determine post
+                 values for nodes
+The reverse
+graph 𝐺 𝑇
+
+
+
+
+                 Step 2: Do DFS on
+                 original graph choosing
+                 starting nodes
+                 according to highest
+                 post values from step 1
+
+
+
+              CSC4120 Design and Analysis of Algorithms
+                                                          10
+A “reverse” solution
+1) Do DFS on 𝐺 and determine post values.
+2) Reverse the graph and do a DFS on 𝐺 𝑇 by                                    The reverse
+    choosing nodes with priority according to their                            graph 𝐺 𝑇
+    post values in 1).
+• The DFS will visit first all nodes in 𝑆𝑆𝐶1 and stop,
+  then in 𝑆𝑆𝐶2 , etc. where 𝑆𝑆𝐶1 , 𝑆𝑆𝐶2 ,…, 𝑆𝑆𝐶𝑘 is a
+  consistent topological order of the DAG of 𝐺.
+
+
+
+                                             The original
+                                             graph 𝐺
+
+
+                                   CSC4120 Design and Analysis of Algorithms
+                                                                                   11
+Conclusions
+• We discovered that using 2 DFS we can find the SCCs!
+• Complexity: 𝑂 𝑉 + 𝐸 .
+
+
+
+
+                             CSC4120 Design and Analysis of Algorithms
+                                                                         12
+

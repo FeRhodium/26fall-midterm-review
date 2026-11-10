@@ -1,0 +1,348 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>A-Star Line Stepper</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"><style>
+/* Layout: one reading column; five stacked sections (three runs, new weights, comparison). Each run is a stack of rows, one row per extraction, so the whole history stays on screen. Same visual family as the Bellman-Ford / Dijkstra stepper. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --line:#d8dde5; --fg:#1a212c; --mute:#566173; --chip:#edf0f4;
+  --accent:#1f6fd1; --warn-bg:#fcefcf; --warn-line:#d39a1d; --warn-fg:#6a4806;
+  --ok-bg:#ddf2e3; --ok-line:#3b9559; --ok-fg:#1c5732; --bad:#c43b36;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151b; --surface:#1a2029; --line:#2d3643; --fg:#e7ebf1; --mute:#98a3b3; --chip:#232b36;
+  --accent:#5da3f6; --warn-bg:#3a2f12; --warn-line:#c28d1f; --warn-fg:#f1d28a;
+  --ok-bg:#183626; --ok-line:#3f9c60; --ok-fg:#a7e4ba; --bad:#ef6e69; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151b; --surface:#1a2029; --line:#2d3643; --fg:#e7ebf1; --mute:#98a3b3; --chip:#232b36;
+  --accent:#5da3f6; --warn-bg:#3a2f12; --warn-line:#c28d1f; --warn-fg:#f1d28a;
+  --ok-bg:#183626; --ok-line:#3f9c60; --ok-fg:#a7e4ba; --bad:#ef6e69; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;
+  padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1{font-size:26px;font-weight:600;margin:0;text-wrap:balance}
+h2{font-size:20px;font-weight:600;margin:0 0 4px;text-wrap:balance}
+p{margin:0}
+.mute{color:var(--mute);font-size:14px}
+.howto{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:0 12px 12px 0;padding:10px 14px;font-size:14px}
+.howto ol{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:2px}
+.graphbox{display:flex;flex-direction:column;gap:10px;margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.graphbox svg{width:100%;max-width:520px;height:auto;display:block}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:13px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);background:var(--chip);color:var(--mute)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+button{font:inherit;font-size:14px;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.nb{display:flex;flex-direction:column;align-items:center;min-width:84px;line-height:1.25;padding:6px 12px}
+.nb b{font-size:17px;font-weight:600}
+.nb span{font-size:11px;color:var(--mute)}
+.nb.done{border-color:var(--accent)}
+.nb.done b{color:var(--accent)}
+.cnt{font-size:13px;color:var(--mute)}
+.slot{border:1px dashed var(--line);border-radius:12px;padding:18px;font-size:13px;color:var(--mute);text-align:center;line-height:1.5}
+.rows{display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px;overflow-x:auto}
+.rw{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);min-width:520px}
+.rw:last-child{border-bottom:none}
+.rl{flex:0 0 92px;font-size:12px;color:var(--mute);line-height:1.3}
+.rl b{color:var(--fg);font-weight:600;font-family:var(--mono)}
+.rw svg{flex:1;min-width:0;height:auto;display:block}
+.stop{min-width:520px;font-size:12px;color:var(--ok-fg);background:var(--ok-bg);border:1px solid var(--ok-line);border-radius:6px;padding:3px 10px;margin:4px 0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:50%;display:inline-block;border:1.5px solid var(--line)}
+.sw.imp{background:var(--warn-bg);border-color:var(--warn-line)}.sw.fin{background:var(--ok-bg);border-color:var(--ok-line)}
+.sw.ext{border-color:var(--accent);border-width:3px}.ln{width:18px;height:0;border-top:3px solid var(--accent);display:inline-block}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 10px 10px;overflow-x:auto}
+.panel svg{width:100%;min-width:480px;height:auto;display:block}
+.panel svg.traj{min-width:0}
+.cap{font-size:13px;line-height:1.45;color:var(--mute);margin-top:4px}
+.cap b{font-weight:600;color:var(--fg)}
+.pair{display:flex;flex-direction:column;gap:12px}
+table.cmp{border-collapse:separate;border-spacing:4px;font-size:14px;min-width:560px}
+table.cmp th{font-weight:500;color:var(--mute);font-size:12px;padding:2px 8px;text-align:left}
+table.cmp td{padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--surface);vertical-align:top}
+table.cmp td.m{font-family:var(--mono);font-size:13px}
+table.cmp td.f{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-fg);font-weight:600}
+.scroll{overflow-x:auto}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;margin-top:10px}
+svg text{font-family:var(--sans)}
+.e{stroke:var(--line);stroke-width:1.6;fill:none}
+.e.pi{stroke:var(--accent);stroke-width:2.8}
+.e.zero{stroke:var(--accent);stroke-width:2.6}
+.e.w2{stroke:var(--mute);stroke-width:2}
+.w{font-size:12px;fill:var(--mute);font-family:var(--mono)}
+.w.z{fill:var(--accent);font-weight:600}
+.nd{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.nd.imp{fill:var(--warn-bg);stroke:var(--warn-line);stroke-width:1.8}
+.nd.fin{fill:var(--ok-bg);stroke:var(--ok-line);stroke-width:1.2}
+.nd.ext{stroke:var(--accent);stroke-width:3.2}
+.nd.src{stroke:var(--fg);stroke-width:1.5}
+.nd.tgt{stroke:var(--bad);stroke-width:2}
+.nm{font-size:11px;fill:var(--mute)}
+.nm.big{font-size:13px;fill:var(--fg);font-weight:600}
+.dv{font-size:13px;font-weight:600;fill:var(--fg);font-family:var(--mono)}
+.kv{font-size:11px;fill:var(--mute);font-family:var(--mono)}
+</style><style>html{color-scheme:light}@media (prefers-color-scheme: dark){html{color-scheme:dark}}body{margin:0}</style></head><body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M1 1L9.5 5L1 9z" fill="context-stroke" stroke="context-stroke" stroke-width="1" stroke-linejoin="round"/></marker>
+</defs></svg>
+
+<div class="wrap">
+<header>
+  <h1>A-Star line stepper</h1>
+  <div class="howto"><b>How to use this page with the chat</b>
+    <ol><li><b>Start by doing nothing here.</b> The chat tells you when to press a button, and in which section.</li>
+    <li>The chat asks a question about the graph below. Work it out yourself and answer in the chat.</li>
+    <li>Only then press the numbered button the chat names. The picture appears below, and earlier pictures stay on screen so you can compare.</li>
+    <li>Do not press ahead of the chat: each picture shows the answer to a step.</li></ol></div>
+  <div class="howto"><b>How to read the pictures (please read this before you start)</b>
+    <div style="margin-top:6px">In the runs, each row shows the line after one extraction. Each circle shows the node name above it and, inside, the node's current distance d (∞ means not reached yet). In Runs 2 and 3 the small number under an open node is its key d + h. Blue arrows are the current predecessor pointers (π). In the section on the new weights, the circles show the new distance d&prime;.</div>
+    <div class="legend"><span><i class="sw" style="background:var(--surface)"></i>white: not reached, d = ∞</span><span><i class="sw imp"></i>amber: open, a distance is found, still waiting in Q</span><span><i class="sw fin"></i>green: finished, in S</span><span><i class="sw ext"></i>blue ring: just extracted</span></div>
+    <div style="margin-top:6px">In the section New weights, blue arrows have weight 0 and grey arrows weight 2.</div>
+  </div>
+
+  <div class="graphbox">
+    <div id="base"></div>
+    <div><b style="font-weight:600">The graph.</b> A line of 9 nodes. The source is <b>s</b> in the middle, the target is <b>A</b> at the right end. Every edge has weight 1 and can be used in both directions. Distances from s are the number of steps. The node 2, halfway between s and A, is called <b>M</b>; we use it later.</div>
+    <div><b style="font-weight:600">Tie rule for the whole session:</b> if two open nodes have the same key, extract the one further to the left first.</div>
+    <div class="chips" id="poslist"></div>
+    <div class="mute">Notation: d(v) is the distance found so far (the lecture slides call it g(v)). The key d + h is called f(v) in the slides.</div>
+  </div>
+</header>
+
+<section id="run1" aria-labelledby="h-r1">
+  <h2 id="h-r1">Run 1: plain Dijkstra, key = d</h2>
+  <p class="mute">Each row is one step: extract the open node with the smallest key, then relax its two edges. The run continues until every node is extracted.</p>
+  <div class="bar" id="r1-btns" role="group" aria-label="Run 1 button"></div>
+  <div id="r1-out"></div>
+  <div class="legend"><span><i class="sw fin"></i>finished (in S)</span><span><i class="sw ext"></i>just extracted</span><span><i class="sw imp"></i>open: a distance is found, still waiting in Q</span><span><i class="ln"></i>current predecessor (π)</span></div>
+</section>
+<section id="run2" aria-labelledby="h-r2">
+  <h2 id="h-r2">Run 2: key = d + h, with h = distance to A</h2>
+  <p class="mute">The distances d are updated by relax exactly as before. Only the choice of the next node to extract uses the key d + h. The number under an open node is its key.</p>
+  <div class="chips" id="h2-chips" style="margin-top:6px"></div>
+  <div class="bar" id="r2-btns" role="group" aria-label="Run 2 button"></div>
+  <div id="r2-out"></div>
+</section>
+<section id="run3" aria-labelledby="h-r3">
+  <h2 id="h-r3">Run 3: key = d + h, with h = distance to M</h2>
+  <p class="mute">M is the node 2, halfway between s and A. Same rules as Run 2, with a different h.</p>
+  <div class="chips" id="h3-chips" style="margin-top:6px"></div>
+  <div class="bar" id="r3-btns" role="group" aria-label="Run 3 button"></div>
+  <div id="r3-out"></div>
+</section>
+<section id="compare" aria-labelledby="h-c">
+  <h2 id="h-c">Compare the three runs</h2>
+  <p class="mute">Order of extraction, where A comes, and the final predecessor pointers (π).</p>
+  <div class="bar" id="c-btns" role="group" aria-label="Comparison button"></div>
+  <div id="c-out"></div>
+</section>
+<section id="newweights" aria-labelledby="h-w">
+  <h2 id="h-w">New weights: w′(u→v) = w(u→v) + h(v) − h(u)</h2>
+  <p class="mute">Each pair of neighbouring nodes has two arrows: the top one points right (weight above it), the bottom one points left (weight below it). Blue arrows have weight 0, grey arrows weight 2. Two buttons, one per choice of h.</p>
+  <div class="bar" id="w-btns" role="group" aria-label="New weights buttons"></div>
+  <div class="pair" id="w-out"></div>
+</section>
+<section id="newrun" aria-labelledby="h-nr">
+  <h2 id="h-nr">Plain Dijkstra on the new weights</h2>
+  <p class="mute">The key is d&prime; only, with no h any more. Each circle shows the new distance d&prime;. Two buttons, one per choice of h.</p>
+  <div class="bar" id="n-btns" role="group" aria-label="Dijkstra on the new weights buttons"></div>
+  <div class="pair" id="n-out"></div>
+</section>
+
+
+
+
+
+<section id="summary" aria-labelledby="h-s">
+  <h2 id="h-s">Summary: how the search moves through the tree</h2>
+  <p class="mute">The tree is the same line in every case. Each picture shows it growing from s: one row per extraction, going down. Green nodes are in S, blue segments are the tree edges added so far, and the newest edge is thicker.</p>
+  <div class="bar" id="s-btns" role="group" aria-label="Summary button"></div>
+  <div id="s-out"></div>
+  <div class="legend" id="s-leg" hidden><span><i class="sw fin"></i>in S (finished)</span><span><i class="sw imp"></i>open, waiting in Q</span><span><i class="ln"></i>tree edge</span><span style="color:var(--ok-fg)">dashed green line: A has just been extracted above it</span></div>
+</section>
+</div>
+
+<script>
+var PS=[-4,-3,-2,-1,0,1,2,3,4], X0=30, DX=56, RR=14, INF=Infinity;
+function nm(p){return p===0?"s":p===4?"A":(p<0?"−"+(-p):String(p))}
+function cx(p){return X0+(p+4)*DX}
+function fmt(x){return x===INF?"∞":String(x)}
+function cp(o){return Object.assign({},o)}
+var VBW=2*X0+8*DX;
+
+/* ---------- simulation ---------- */
+function sim(h,rw){
+  var hh=rw?function(){return 0}:h;
+  var d={},S=[],pi={},i;
+  PS.forEach(function(p){d[p]=INF});
+  d[0]=0;
+  function keys(){var k={};PS.forEach(function(p){if(S.indexOf(p)<0&&d[p]!==INF)k[p]=d[p]+hh(p)});return k}
+  var rows=[{u:null,d:cp(d),pi:{},S:[],chg:{},key:keys()}];
+  for(var it=1;it<=9;it++){
+    var best=null,bk=INF;
+    PS.forEach(function(p){
+      if(S.indexOf(p)>=0||d[p]===INF)return;
+      var k=d[p]+hh(p);
+      if(k<bk){bk=k;best=p}
+    });
+    var u=best;S.push(u);
+    var chg={};
+    [u-1,u+1].forEach(function(v){
+      if(v<-4||v>4||S.indexOf(v)>=0)return;
+      var wt=rw?1+h(v)-h(u):1;
+      if(d[u]+wt<d[v]){d[v]=d[u]+wt;pi[v]=u;chg[v]=1}
+    });
+    rows.push({u:u,d:cp(d),pi:cp(pi),S:S.slice(),chg:chg,key:keys()});
+  }
+  var order=rows.slice(1).map(function(r){return r.u});
+  return {rows:rows,order:order,posA:order.indexOf(4)+1,pi:rows[9].pi};
+}
+var hZero=function(p){return 0}, hA=function(p){return Math.abs(4-p)}, hM=function(p){return Math.abs(2-p)};
+var R1=sim(hZero), R2=sim(hA), R3=sim(hM), R2w=sim(hA,true), R3w=sim(hM,true);
+
+/* ---------- drawing ---------- */
+function node(p,cls,cy){return '<circle class="nd'+cls+'" cx="'+cx(p)+'" cy="'+cy+'" r="'+RR+'"/>'}
+function baseSvg(){
+  var cy=30,h='<svg viewBox="0 0 '+VBW+' 60" role="img" aria-label="Line of nine nodes, source s in the middle, target A at the right end">';
+  for(var p=-4;p<4;p++)h+='<line class="e" x1="'+(cx(p)+RR)+'" y1="'+cy+'" x2="'+(cx(p+1)-RR)+'" y2="'+cy+'"/>';
+  PS.forEach(function(p){
+    h+=node(p,p===0?' src':(p===4?' tgt':''),cy);
+    h+='<text class="nm big" x="'+cx(p)+'" y="'+cy+'" text-anchor="middle" dominant-baseline="central">'+nm(p)+'</text>';
+    if(p===2)h+='<text class="kv" x="'+cx(p)+'" y="54" text-anchor="middle" dominant-baseline="central">M (midpoint)</text>';
+  });
+  return h+'</svg>';
+}
+function rowSvg(st,showKeys){
+  var cy=28,H=showKeys?64:46,h='<svg viewBox="0 0 '+VBW+' '+H+'" role="img" aria-label="State of the line">';
+  for(var p=-4;p<4;p++){
+    var x1=cx(p)+RR,x2=cx(p+1)-RR,cls="e",ax1=x1,ax2=x2;
+    if(st.pi[p+1]===p){cls="e pi"}
+    else if(st.pi[p]===p+1){cls="e pi";ax1=x2;ax2=x1}
+    h+='<line class="'+cls+'" x1="'+ax1+'" y1="'+cy+'" x2="'+ax2+'" y2="'+cy+'"'+(cls==="e"?'':' marker-end="url(#ah2)"')+'/>';
+  }
+  PS.forEach(function(p){
+    var c="";
+    if(st.S.indexOf(p)>=0)c+=" fin";
+    else if(st.d[p]!==INF)c+=" imp";
+    if(st.u===p)c+=" ext";
+    h+=node(p,c,cy);
+    h+='<text class="nm'+((p===0||p===4)?' big':'')+'" x="'+cx(p)+'" y="8" text-anchor="middle" dominant-baseline="central">'+nm(p)+'</text>';
+    h+='<text class="dv" x="'+cx(p)+'" y="'+cy+'" text-anchor="middle" dominant-baseline="central">'+fmt(st.d[p])+'</text>';
+    if(showKeys&&st.key[p]!==undefined)h+='<text class="kv" x="'+cx(p)+'" y="56" text-anchor="middle" dominant-baseline="central">key '+st.key[p]+'</text>';
+  });
+  return h+'</svg>';
+}
+function runHTML(R,showKeys,prime,tail){
+  var h='<div class="rows">';
+  R.rows.forEach(function(st,i){
+    var lab=i===0?'<b>Start</b><br>'+(prime?'d\u2032':'d')+' = ∞ except s':'<b>'+i+'</b> extract <b>'+nm(st.u)+'</b>';
+    h+='<div class="rw"><div class="rl">'+lab+'</div>'+rowSvg(st,showKeys)+'</div>';
+    if(st.u===4)h+='<div class="stop">A has just been extracted. A search for A alone could stop here. We carry on to build the whole tree.</div>';
+  });
+  return h+'</div><div class="cap"><b>Order of extraction:</b> '+R.order.map(nm).join(", ")+'. A is number <b>'+R.posA+'</b>.'+(tail?' '+tail:'')+'</div>';
+}
+function wSvg(h,label){
+  var cy=44,H=92,s='<svg viewBox="0 0 '+VBW+' '+H+'" role="img" aria-label="'+label+'">';
+  for(var p=-4;p<4;p++){
+    var x1=cx(p)+RR+1,x2=cx(p+1)-RR-1,wr=1+h(p+1)-h(p),wl=1+h(p)-h(p+1),xm=(x1+x2)/2;
+    s+='<line class="e'+(wr===0?' zero':' w2')+'" x1="'+x1+'" y1="'+(cy-6)+'" x2="'+x2+'" y2="'+(cy-6)+'" marker-end="url(#ah2)"/>';
+    s+='<line class="e'+(wl===0?' zero':' w2')+'" x1="'+x2+'" y1="'+(cy+6)+'" x2="'+x1+'" y2="'+(cy+6)+'" marker-end="url(#ah2)"/>';
+    s+='<text class="w'+(wr===0?' z':'')+'" x="'+xm+'" y="'+(cy-17)+'" text-anchor="middle" dominant-baseline="central">'+wr+'</text>';
+    s+='<text class="w'+(wl===0?' z':'')+'" x="'+xm+'" y="'+(cy+18)+'" text-anchor="middle" dominant-baseline="central">'+wl+'</text>';
+  }
+  PS.forEach(function(p){
+    s+=node(p,p===0?' src':(p===4?' tgt':''),cy);
+    s+='<text class="nm big" x="'+cx(p)+'" y="'+cy+'" text-anchor="middle" dominant-baseline="central">'+nm(p)+'</text>';
+    s+='<text class="kv" x="'+cx(p)+'" y="'+(cy+36)+'" text-anchor="middle" dominant-baseline="central">h = '+h(p)+'</text>';
+  });
+  return s+'</svg>';
+}
+
+/* ---------- static bits ---------- */
+document.getElementById("base").innerHTML=baseSvg();
+document.getElementById("poslist").innerHTML=PS.map(function(p){return '<span class="chip">'+nm(p)+': '+(p<0?"−"+(-p):p)+' from s</span>'}).join("");
+document.getElementById("h2-chips").innerHTML='<span class="chip" style="background:none;border:none;padding-left:0">h(v) =</span>'+PS.map(function(p){return '<span class="chip">'+nm(p)+': '+hA(p)+'</span>'}).join("");
+document.getElementById("h3-chips").innerHTML='<span class="chip" style="background:none;border:none;padding-left:0">h(v) =</span>'+PS.map(function(p){return '<span class="chip">'+nm(p)+': '+hM(p)+'</span>'}).join("");
+
+/* ---------- generic one-button sections ---------- */
+var on={r1:false,r2:false,r3:false,c:false,s:false}, wOn=[false,false], nOn=[false,false];
+function btn(id,n,sub,fn,done){return '<button class="nb'+(done?' done':'')+'" onclick="'+fn+'" aria-label="Button '+n+': '+sub+'"><b>'+n+'</b><span>'+sub+'</span></button>'}
+function slot(n,what){return '<div class="slot"><b>Picture '+n+'</b><br>'+what+'<br>wait for the chat, then press button '+n+'</div>'}
+function renderRun(key,R,keys,btnId,outId,sub){
+  document.getElementById(btnId).innerHTML=btn(btnId,1,sub,"toggle('"+key+"')",on[key])+'<button onclick="resetSec(\''+key+'\')">Reset</button>';
+  document.getElementById(outId).innerHTML=on[key]?runHTML(R,keys):slot(1,'The whole run');
+}
+function toggle(k){on[k]=true;renderAll()}
+function resetSec(k){on[k]=false;renderAll()}
+function renderW(){
+  var subs=["h = A","h = M"], fs=[hA,hM], labs=["New weights for h = distance to A","New weights for h = distance to M"];
+  document.getElementById("w-btns").innerHTML=subs.map(function(s,i){return btn("w-btns",i+1,s,"pressW("+i+")",wOn[i])}).join("")+'<button onclick="wOn=[false,false];renderAll()">Reset</button>';
+  document.getElementById("w-out").innerHTML=[0,1].map(function(i){
+    return wOn[i]?'<div class="panel">'+wSvg(fs[i],labs[i])+'<div class="cap"><b>'+labs[i]+'</b>. Blue arrows have weight 0.</div></div>':slot(i+1,labs[i]);
+  }).join("");
+}
+function pressW(i){wOn[i]=true;renderAll()}
+function pressN(i){nOn[i]=true;renderAll()}
+function renderN(){
+  var subs=["h = A","h = M"], Rs=[R2w,R3w], labs=["Plain Dijkstra on the new weights for h = distance to A","Plain Dijkstra on the new weights for h = distance to M"], tails=["Compare the order and the blue arrows with Run 2.","Compare the order and the blue arrows with Run 3."];
+  document.getElementById("n-btns").innerHTML=subs.map(function(s,i){return btn("n-btns",i+1,s,"pressN("+i+")",nOn[i])}).join("")+'<button onclick="nOn=[false,false];renderAll()">Reset</button>';
+  document.getElementById("n-out").innerHTML=[0,1].map(function(i){
+    return nOn[i]?'<div><div class="cap" style="margin:0 0 6px"><b>'+labs[i]+'</b></div>'+runHTML(Rs[i],false,true,tails[i])+'</div>':slot(i+1,labs[i]);
+  }).join("");
+}
+function renderC(){
+  document.getElementById("c-btns").innerHTML=btn("c-btns",1,"Compare",'toggle(\'c\')',on.c)+'<button onclick="resetSec(\'c\')">Reset</button>';
+  if(!on.c){document.getElementById("c-out").innerHTML=slot(1,'The comparison');return}
+  var runs=[["Run 1","d  (h = 0)",R1],["Run 2","d + h, h = dist to A",R2],["Run 3","d + h, h = dist to M",R3]];
+  var t='<div class="scroll"><table class="cmp"><thead><tr><th>Run</th><th>Key</th><th>Order of extraction</th><th>A is number</th><th>Extracted before A</th></tr></thead><tbody>';
+  runs.forEach(function(r){t+='<tr><td>'+r[0]+'</td><td class="m">'+r[1]+'</td><td class="m">'+r[2].order.map(nm).join(", ")+'</td><td class="f">'+r[2].posA+'</td><td class="m">'+(r[2].posA-1)+'</td></tr>'});
+  t+='</tbody></table></div>';
+  var fin=R1.rows[9];
+  t+='<div class="panel" style="margin-top:12px">'+rowSvg({u:null,d:fin.d,pi:fin.pi,S:fin.S,chg:{},key:{}},false)+'<div class="cap"><b>Final tree, identical in all three runs.</b> Each node’s predecessor is its neighbour on the way to s, and d is the number of steps from s.</div></div>';
+  document.getElementById("c-out").innerHTML=t;
+}
+
+function treeSvg(R,title){
+  var W=300,x0=26,dx=31,y0=40,dy=22,H=y0+10*dy+4,s='<svg class="traj" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+title+'">';
+  function X(p){return x0+(p+4)*dx}
+  function par(p){return p>0?p-1:p+1}
+  PS.forEach(function(p){s+='<text class="nm'+((p===0||p===4)?' big':'')+'" x="'+X(p)+'" y="12" text-anchor="middle" dominant-baseline="central">'+nm(p)+'</text>'});
+  R.rows.forEach(function(st,i){
+    var y=y0+i*dy;
+    s+='<text class="kv" x="3" y="'+y+'" dominant-baseline="central">'+(i===0?'0':i)+'</text>';
+    PS.forEach(function(p){
+      if(p===0)return;
+      var q=par(p);
+      if(st.S.indexOf(p)>=0&&st.S.indexOf(q)>=0){
+        var cur=st.u===p;
+        s+='<line x1="'+X(q)+'" y1="'+y+'" x2="'+X(p)+'" y2="'+y+'" stroke="var(--accent)" stroke-width="'+(cur?4:2.2)+'" stroke-linecap="round"/>';
+      }
+    });
+    PS.forEach(function(p){
+      var inS=st.S.indexOf(p)>=0,cls="nd"+(inS?" fin":"")+(st.u===p?" ext":"");
+      if(!inS&&st.d[p]!==INF)cls="nd imp";
+      s+='<circle class="'+cls+'" cx="'+X(p)+'" cy="'+y+'" r="7"/>';
+    });
+    if(st.u===4)s+='<line x1="'+(x0-14)+'" y1="'+(y+dy/2)+'" x2="'+(X(4)+14)+'" y2="'+(y+dy/2)+'" stroke="var(--ok-line)" stroke-width="1.4" stroke-dasharray="5 3"/>';
+  });
+  return s+'</svg>';
+}
+function renderS(){
+  document.getElementById("s-btns").innerHTML=btn("s-btns",1,"Summary","toggle('s')",on.s)+'<button onclick="resetSec(\'s\')">Reset</button>';
+  document.getElementById("s-leg").hidden=!on.s;
+  if(!on.s){document.getElementById("s-out").innerHTML=slot(1,'The three trajectories');return}
+  var runs=[["Run 1: key d",R1,"Both sides at the same speed"],["Run 2: key d + h, h = dist to A",R2,"Straight to A, then the left side"],["Run 3: key d + h, h = dist to M",R3,"Pulled to M, a detour left, then A"]];
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">';
+  runs.forEach(function(r){h+='<div class="panel"><div class="cap" style="margin:0 0 4px"><b>'+r[0]+'</b></div>'+treeSvg(r[1],r[0])+'<div class="cap">'+r[2]+'. A is extracted <b>'+r[1].posA+'th</b>; '+(r[1].posA-1)+' nodes before it. Rows below the dashed green line are only needed to finish the whole tree.</div></div>'});
+  h+='</div><div class="note">Same tree in every picture. The search plain Dijkstra runs on the new weights follows exactly the same path as Run 2 (for h = A) and Run 3 (for h = M). Only the order of visiting changes.</div>';
+  document.getElementById("s-out").innerHTML=h;
+}
+function renderAll(){
+  renderRun('r1',R1,false,"r1-btns","r1-out","Run 1");
+  renderRun('r2',R2,true,"r2-btns","r2-out","Run 2");
+  renderRun('r3',R3,true,"r3-btns","r3-out","Run 3");
+  renderW();renderN();renderC();renderS();
+}
+renderAll();
+</script>
+</body></html>

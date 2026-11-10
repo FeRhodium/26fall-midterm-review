@@ -1,0 +1,271 @@
+Greedy algs
+• Huffman encoding
+• Min set cover
+    CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                  1
+Objective
+• Huffman encoding.
+• Set covering.
+• DPV Chapter 5 (we don’t cover the material in section 5.3).
+
+
+
+
+                        CSC4120 Design and Analysis of Algorithms   2
+                                   - C. Courcoubetis
+                                                                                             𝐵
+                                                                                                 𝐶          transmit: 𝐴𝐵𝐶𝐴 …
+Huffman encoding                                                                       𝐴             𝐴
+
+• MP3: analog signal is digitized by sampling at
+  regular intervals, yielding a sequence of real
+  numbers 𝑠1 , 𝑠2 , . . . , 𝑠𝑇 .
+• For instance, at a rate of 44,100 samples per                         for simplicity assume
+  second, a 50-minute symphony would                                    4 possible values
+  correspond to 𝑇 = 50 × 60 × 44,100 ≈                                     𝛤 = {𝐴, 𝐵, 𝐶, 𝐷}
+  130 million measurements.
+• Each real-valued sample 𝑠𝑡 is quantized:
+  approximated by a nearby number from a finite                                                          A: 00, B:01, C:10, D:11
+  set 𝛤 of “rounded” numbers.                                                                            need 130 ⋅ 106 ⋅ 2 bits
+• The resulting string of length 𝑇 over alphabet 𝛤
+  is encoded in binary.
+• What is the most economical way to write this
+  long string in binary?
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                         3
+                                                                                             𝐵
+                                                                                                 𝐶          transmit: 𝐴𝐵𝐶𝐴 …
+Huffman encoding                                                                       𝐴             𝐴
+
+• MP3: analog signal is digitized by sampling at
+  regular intervals, yielding a sequence of real
+  numbers 𝑠1 , 𝑠2 , . . . , 𝑠𝑇 .
+• For instance, at a rate of 44,100 samples per
+  second, a 50-minute symphony would                              can we do better? use
+  correspond to 𝑇 = 50 × 60 × 44,100 ≈                            variable length encoding, i.e.,
+  130 million measurements.                                       shorter codewords for more
+                                                                  frequent symbols…
+• Each real-valued sample 𝑠𝑡 is quantized:
+  approximated by a nearby number from a finite                                                          A: 00, B:01, C:10, D:11
+  set 𝛤.                                                                                                 need 130 ⋅ 106 ⋅ 2 bits
+• The resulting string of length 𝑇 over alphabet 𝛤
+  is encoded in binary.
+• What is the most economical way to write this
+  long string in binary?
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                         4
+                                                                                             𝐵
+                                                                                                 𝐶          transmit: 𝐴𝐵𝐶𝐴 …
+Huffman encoding                                                                       𝐴             𝐴
+
+• MP3: analog signal is digitized by sampling at
+  regular intervals, yielding a sequence of real
+  numbers 𝑠1 , 𝑠2 , . . . , 𝑠𝑇 .
+• For instance, at a rate of 44,100 samples per
+  second, a 50-minute symphony would                              can we do better? use
+  correspond to 𝑇 = 50 × 60 × 44,100 ≈                            variable length encoding, i.e.,
+  130 million measurements.                                       shorter codewords for more
+                                                                  frequent symbols…
+• Each real-valued sample 𝑠𝑡 is quantized:
+  approximated by a nearby number from a finite                                                          A: 00, B:01, C:10, D:11
+  set 𝛤.                                                                                                 need 130 ⋅ 106 ⋅ 2 bits
+• The resulting string of length 𝑇 over alphabet 𝛤                         need prefix-free property:         read the input without
+                                                                           no codeword can be a prefix            looking ahead
+  is encoded in binary.                                                    of another codeword.
+• What is the most economical way to write this                            Cannot have A = 01, B = 011          Any prefix-free
+                                                                                                                encoding can be
+  long string in binary?                                                                                        represented by a
+                                                                                                                full binary tree.
+                               CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                          5
+Full binary trees
+• A binary tree in which every node has either zero or two children.
+• The symbols are at the leaves, and each codeword is defined by a path from root to leaf,
+  interpreting left as 0 and right as 1.
+• Decoding is unique: a string of bits is decrypted by starting at the root, reading the string
+  from left to right to move downward the tree (left as 0 and right as 1), and whenever a
+  leaf is reached, outputting the corresponding symbol and returning to the root.
+
+                                                                     𝑓1 , 𝑓2 , … , 𝑓𝑛 = frequencies of 𝑛 symbols
+                                                                                                                 in millions
+
+                                                                     Total cost:
+                                                                      = 𝑖=1,..,𝑛 𝑓𝑖 ×𝑑𝑒𝑝𝑡ℎ(𝑖)
+                                                                      =                          frequency of node 𝑗 .
+      need 213 Mbs, a 17%                                                  𝑎𝑙𝑙 𝑛𝑜𝑑𝑒𝑠 𝑗 𝑜𝑓 𝑡𝑟𝑒𝑒
+         improvement
+                                CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                  6
+Greedy algorithm
+                                                                                                                 𝑇′
+• Order 𝑓1 ≤ 𝑓2 ≤ ⋯ ≤ 𝑓𝑛 .           for {𝑓1 , 𝑓2 , 𝑓3 , … , 𝑓𝑛 }                               𝑓1 + 𝑓2 + 𝑓5   𝑓4 + 𝑓3
+
+
+• Optimal substructure: assume 𝑇 optimal. Then:
+ a) Lowest 2-subtree has 𝑓1 , 𝑓2 .
+ b) Reduced tree 𝑇 ′ = 𝑇 − {𝑓1 , 𝑓2 } optimal for
+  the 𝑛 − 1 numbers {𝑓1 + 𝑓2 , 𝑓3 , … , 𝑓𝑛 }.                                                                                𝑇
+
+                   symbol 1+2                                              ′
+                                             𝑐𝑜𝑠𝑡(𝑇𝑜𝑝𝑡 ) = 𝑓1 + 𝑓2 + 𝑐𝑜𝑠𝑡(𝑇𝑜𝑝𝑡 )
+
+• Algorithm: build 𝑇 bottom up: create subtree for two smallest 𝑓1 , 𝑓2 ,
+  then, for the two smallest numbers in {𝑓 ′ = 𝑓1 + 𝑓2 , 𝑓3 , … , 𝑓𝑛 }, etc.
+
+                                  CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                         7
+CLRS fig 16.5
+                CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                              8
+Entropy
+• The inherent unpredictability, or randomness, of a probability distribution can be
+  measured by the extent to which it is possible to “compress data” drawn from that
+  distribution (i.e., use fewer bits to transmit sequences of symbols).
+• More compressible ≡ less random ≡ more predictable.                               𝑝 + ⋯+ 𝑝 = 1                         1       𝑛
+
+
+
+• Suppose there are 𝑛 possible symbol outcomes 𝑠1 , … , 𝑠𝑛 , with probabilities 𝑝1 , . . . , 𝑝𝑛 .
+• If we do (a large number) of 𝑚 experiments, the resulting frequency of each symbol 𝑖 is
+  𝑓𝑖 = 𝑚𝑝𝑖 . How to encode each symbol to reduce the total # of bits to transmit the data?
+                                                                       1
+• Shannon's theorem: we need at least log 𝑝 bits for an outcome with prob. 𝑝𝑖 , and to
+                                           𝑖
+  encode these 𝑚 outcomes we need a minimum of
+                                                           1                                1
+                                            𝑖 𝑓𝑖 log 𝑝           =𝑚          𝑖 𝑝𝑖 log 𝑝           bits.
+                                                             𝑖                                𝑖
+                                                                                                                   1
+• Entropy of distribution: average number of bits per outcome =                                           𝑖 𝑝𝑖 log 𝑝 .
+                                                                                                                    𝑖
+               according to probability
+                                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                             9
+ Example
+                                                                                1
+ • Can we achieve # of bits for symbol 𝑠𝑖 = log 𝑝 ?
+                                                                                  𝑖
+ • Easy special case: assume that probs are of the form 2−𝑘 and
+   sum to 1. Then Huffman coding achieves the lower bound. See                                                             2−1
+   problem 5.19 in DPV (also in your homework).                                                             𝑝𝐴 = 2−1
+ • Example: 𝑛 = 4, 𝑝𝐴 = 2−1 , 𝑝𝐷 = 2−2 , 𝑝𝐵 = 𝑝𝑐 = 2−3 .                                                       2−2
+ • {2−3 , 2−3 , 2−2 , 2−1 }, {2−2 , 2−2 , 2−1 }, {2−1 , 2−1 }, {1}.                                                              2−2
+
+
+                                                                                                                 2−3    2−3
+                                                                                                                ×𝑚 to get frequencies
+The core idea of information theory is that
+the "informational value" of a                              Huffman encoding achieves an encoding
+communicated message depends on the                                   1
+                                                                of log bits for symbol with 𝑝𝑖 .
+degree to which the content of the                                         𝑝𝑖
+message is surprising. If a highly likely
+event occurs, the message carries very
+little information. On the other hand, if a
+highly unlikely event occurs, the message
+is much more informative.                     CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                              10
+Set cover
+• Example of assigning schools to to towns: each school can serve students of towns
+  within a 30km range. What is the smallest number of schools required and where?
+
+                                                                                   Input: a set of elements 𝐵; sets
+            30km
+                                                        optimal                    𝑆1 , … , 𝑆𝑚 ⊆ 𝐵.
+                                                                                   Output: A selection of the 𝑆𝑖 s
+                                                                                   whose union is 𝐵.
+                                                                                   Cost: Number of sets picked.
+
+                                                                                   𝐵 = 𝑎, 𝑏, 𝑐, 𝑑, 𝑒, 𝑓, 𝑔, 𝑖, 𝑗, 𝑘
+                                                                                   𝑆𝑎 = 𝑎, 𝑑, 𝑏, 𝑒, ℎ, 𝑖, 𝑘 ,
+                                                                                   𝑆𝑏 = 𝑏, 𝑎, 𝑐, 𝑑 ,
+                                                                                   𝑆𝑐 = 𝑐, 𝑑, 𝑏 ,
+                                                                                   𝑆𝑑 = 𝑑, 𝑐, 𝑏, 𝑎 ,
+                                                                                   𝑆𝑒 = …
+                                                                                   …
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                      11
+Set cover
+• Example of assigning schools to to towns: each school can serve students of towns
+  within a 30km range. What is the smallest number of schools required and where?
+
+            +1                                                                     Greedy algorithm:
+                                                                                   Repeat until all elements of 𝐵 are
+                       +2                                                          covered:
+                                                                                   • Pick the set 𝑆𝑖 with the largest
+   +7                                                                                number of uncovered elements
+                                                                                     so far.
+
+             +1                                                                    𝑆𝑎 = {𝑎, 𝑑, 𝑏, 𝑘, 𝑖, ℎ, 𝑒}
+                                                                                   𝑆𝑔 = 𝑓, 𝑔, 𝑒
+                                                                                   𝑆𝑐 = 𝑐, 𝑑, 𝑏             optimal:
+                                                                                   𝑆𝑗 = {𝑗, 𝑖, ℎ}           𝑆𝑏 , 𝑆𝑒 , 𝑆𝑖
+                            CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                    12
+                                                                                                            even if we don’t
+How well we approximate the optimum?                                                                           know it!
+
+
+• Claim: Suppose 𝐵 contains 𝑛 elements and that the optimal cover 𝐶 ∗ consists of 𝑘
+  sets. Then the greedy algorithm will use at most 𝑘 ln 𝑛 sets, i.e.,
+                                                 𝐶𝑔
+                                                       ≤ ln 𝑛.
+                                                 𝐶∗
+• Proof: Let 𝑛𝑡 be the number of elements still not covered after 𝑡 iterations of the
+  greedy algorithm (so 𝑛0 = 𝑛).
+ Greedy alg. will ensure that:                 𝑥 ≠ 0:                                       to understand why
+              𝑛𝑡            1               1 − 𝑥 < 𝑒 −𝑥                                                𝑛𝑡
+ 𝑛𝑡+1 ≤ 𝑛𝑡 − = 𝑛𝑡 (1 − ).                                                                   𝑛𝑡+1 ≤ 𝑛𝑡 − see
+               𝑘             𝑘                                                                           𝑘
+                                            1 𝑡                                             next slide.
+                       1 𝑡                −                       −
+                                                                      𝑡
+ Hence 𝑛𝑡 ≤ 𝑛0 1 −           < 𝑛0 𝑒         𝑘       = 𝑛0 𝑒            𝑘
+                       𝑘
+ At 𝑡 = 𝑘 ln 𝑛0 , 𝑛𝑡 < 1 ⇒ everything is covered.                                            Same as: at step 𝑡 + 1 we
+                                                                                                              𝑛
+                                                                                             cover more than 𝑡 nodes.
+                                                                                                             𝑘
+
+                              CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                         13
+                                          Not all red sets can be small;
+                                                                    𝑛
+                                           There must be one ≥ 𝑘 .
+                                                                           Total of 𝑛 nodes.
+            optimal cover                                                  Optimal cover 𝑘 = 9 subsets, shown in red.
+                                                                           There must be a red set that covers more than the
+                                                                                                  𝑛
+                                                                           average cover, i.e., ≥ 𝑘 nodes (otherwise, if each
+                                                                                                  𝑛
+                                                                           red set covers < 𝑘 , there is no way that 𝑘 sets
+                                                                           cover all the 𝑛 modes.)
+
+                                                                           Greedy cover (blue subsets) up to time 𝑡, 𝑛𝑡
+                                                                           nodes remain to be covered. It has used (without
+                                                                           knowing) 2 red subsets from the optimal set.
+                                                                           Fact: the remaining 𝑘 ′ = 𝑘 − 2 red subsets cover
+                                                                           all the remaining 𝑛𝑡 nodes and are available at 𝑡.
+                                                                           Hence, there must be a red set not used by the
+                                                                           greedy up to time 𝑡 (i.e., still available) that
+                                                                                      𝑛    𝑛
+                                                                           covers ≥ 𝑘𝑡′ ≥ 𝑘𝑡 new nodes.
+                                                                           Hence, the greedy alg in step 𝑡 + 1 will pick a set
+𝑛𝑡 nodes                                                                   that covers at least what this red set can cover,
+ remain    These are covered by                                                          𝑛
+                                                                           i.e., cover ≥ 𝑘𝑡 new nodes.
+            less than 𝑘 red sets.
+                                    CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                                                       14
+Conclusions
+• Greedy algorithms are simple and intuitive.
+• In many cases they are also optimal.
+• If not optimal, we like to get an approximation ratio, i.e., a bound on how
+  they compare to the optimum in the worse case.
+
+
+
+
+                          CSC4120 Design and Analysis of Algorithms - C. Courcoubetis
+                                                                                        15
+
