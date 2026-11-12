@@ -7,38 +7,37 @@ Review.setup({
     { href: "../3150/", label: "CSC3150" }
   ],
   exam: {
-    start: "2026-11-02T08:30:00+08:00",
-    when: "11 月 2 日（周一）08:30–09:30",
-    where: "AB E206（另：10/27 19:00 Quiz 2 @ TD 307）",
-    badge: "期中 <b>30% · 36 分</b> · 可带 1 张 A4 单面手写小抄"
+    start: "2026-11-24T19:00:00+08:00",
+    when: "11 月 24 日（周二）19:00 Quiz 3",
+    where: "TD 307（Tutorial 随堂测 · 基于 PS5/PS6）",
+    badge: "Quiz 3 · <b>11/24 19:00 @ TD 307</b> · 4 次小测取最高 3 次共 40%"
   },
-  sheetKicker: "期中允许携带 1 张 A4 单面本人手写小抄 · 建议按本页提纲手写整理",
+  sheetKicker: "Quiz 3（11 月 24 日闭卷随堂测）与期末复习提纲 · 已完整增补 L13–L18 与 PS6 核心定理与证明框架",
   groups: [
-    { id: "computability", label: "可计算性理论 · Lecture 1–9", note: "集合基数、康托尔对角化、图灵机形式化与变体等价性、通用图灵机 UTM、停机问题与映射归约。" },
-    { id: "complexity", label: "计算复杂性理论 · Lecture 10–12", note: "最坏情况时间复杂度、渐近记号、复杂性类 P、带时钟对角化与时间层次定理、验证机与复杂性类 NP、多项式时间归约与 NP 完全性。" },
-    { id: "ps", label: "习题集精讲 · Problem Set 1–5", note: "课程大纲明确说明约 30%–40% 的考题直接改编自作业题，按完整形式化构造与双向证明整理。" },
-    { id: "exam", label: "官方期中样卷 · Practice Midterm", note: "官方发布的 36 分 Practice Midterm 逐题解析（3 道多选 + 4 道简答 + 2 道综合证明大题）。" }
+    { id: "quiz3", label: "Quiz 3 核心讲义 · Lecture 13–20（电路、Cook-Levin 与空间复杂性）", note: "期中后至 Quiz 3（11 月 24 日）核心内容：布尔电路与公式、Shannon 上下界、PSIZE 与非一致性、电路模拟图灵机 TIME(T) ⊆ SIZE(T²)、Cook–Levin 定理（CIRCUIT-SAT 与 SAT）、空间复杂性（L / NL / PSPACE）、时空与空间层次定理、STCONN 与 Savitch 定理。" },
+    { id: "ps", label: "习题集精讲 · Problem Set 1–6（Quiz 3 重点看 PS6 & PS5）", note: "课程大纲明确说明随堂小测（In-class tests）直接基于周期性作业（Periodic Assignments）命题！PS6 为 Quiz 3 最核心题源。" },
+    { id: "complexity", label: "计算复杂性基础 · Lecture 10–12（Quiz 2 后半衔接）", note: "最坏情况时间复杂度、渐近记号、复杂性类 P、带时钟对角化与时间层次定理、验证机与复杂性类 NP、多项式时间归约与 NP 完全性。" },
+    { id: "computability", label: "可计算性理论回顾 · Lecture 1–9", note: "集合基数、康托尔对角化、图灵机形式化与变体等价性、通用图灵机 UTM、停机问题与映射归约。" },
+    { id: "exam", label: "期中样卷归档 · Practice Midterm", note: "官方发布的 36 分 Practice Midterm 逐题解析。" }
   ],
   tags: { slide: "课件", hw: "作业", sample: "样卷", practice: "练习" },
   home: String.raw`
 <p class="kicker">CSC4010 Introduction to Theoretical Computer Science · Fall 2026 · Prof. Aditi Dudeja</p>
-<h1>期中与 Quiz 2 复习</h1>
+<h1>Quiz 3 专题与全课复习</h1>
 <div class="facts">
   <div class="card"><dl>
-    <dt>期中考试（Midterm）</dt><dd>2026 年 11 月 2 日（周一）08:30–09:30（时长 60 分钟），地点：行政楼 AB E206；满分 36 分，占总评 <b>30%</b>。</dd>
-    <dt>试卷题型（来自官方样卷）</dt><dd><b>3 道不定项选择</b>（4 分/题，错选或漏选 1 项扣 1 分）+ <b>4 道简答</b>（3 分/题）+ <b>2 道综合证明大题</b>（6 分/题），共 <b>36 分</b>。</dd>
-    <dt>小测 2（Quiz 2）</dt><dd>2026 年 10 月 27 日（周二）19:00–19:20（Tutorial 前 20 分钟），地点：TD 307；满分 16 分，范围：Lecture 6–10 及 PS2–PS4。</dd>
-    <dt>考查范围与小抄规则</dt><dd>期中覆盖 <b>Lecture 1–12</b>、<b>Problem Set 1–5</b> 及 <b><a href="#/c/sample">Practice Midterm</a></b>。允许携带 <b>1 张 A4 单面、本人亲笔手写</b>的小抄。</dd>
-    <dt>命题规律（来自 Syllabus）</dt><dd>约 <b>30%–40%</b> 的期中/期末考题与作业题完全相同或仅作微小变形（例如样卷大题 2 即为 PS3 Q3 的 \(0^n 1^n\) 变体）。</dd>
+    <dt>小测 3（Quiz 3 / Test 3）</dt><dd>2026 年 11 月 24 日（周二）<b>19:00</b>（Tutorial 时段），地点：<b>TD 307</b>；全学期共 4 次随堂测（9/29、10/27、<b>11/24</b>、12/15），去掉最低 1 次后占总评 <b>40%</b>。</dd>
+    <dt>Quiz 3 考查范围</dt><dd>课程官网写明 <i>“Tests will be based on periodic assignments”</i>：重点覆盖 <b><a href="#/c/ps6">Problem Set 6</a></b>（及 Quiz 2 之后的 <b><a href="#/c/ps5">PS5</a></b>），对应讲义 <b><a href="#/c/l13_14">Lecture 13–14</a></b>（布尔电路与公式、Shannon 上下界、PSIZE 与非一致性）、<b><a href="#/c/l16_17">Lecture 16–17</a></b>（电路模拟图灵机、CIRCUIT-SAT、Cook–Levin 定理）以及 <b><a href="#/c/l18">Lecture 18–20</a></b>（空间复杂性 L/NL/PSPACE、空间层次定理、STCONN 与 Savitch 定理）。</dd>
+    <dt>已同步最新资料</dt><dd>已从课程主页抓取最新发布的 <a href="materials/PS6.pdf" target="_blank" rel="noopener"><b>PS6.pdf</b></a>、<a href="materials/CSC4010_Lecture13(Annotated).pdf" target="_blank" rel="noopener">L13</a>、<a href="materials/CSC4010_Lecture14(Annotated).pdf" target="_blank" rel="noopener">L14</a>、<a href="materials/CSC4010_Lecture16(Annotated).pdf" target="_blank" rel="noopener">L16</a>、<a href="materials/CSC4010_Lecture17(Annotated).pdf" target="_blank" rel="noopener">L17</a>、<a href="materials/CSC4010_Lecture18(Annotated).pdf" target="_blank" rel="noopener">L18</a> 手写批注版课件。</dd>
   </dl></div>
-  <div class="card seat-card"><div><div>期中笔试</div><div class="big">11/2</div></div><p>08:30 AB E206 · 36 分 (30%)<br>Quiz 2：10/27 19:00 TD 307</p></div>
+  <div class="card seat-card"><div><div>Quiz 3</div><div class="big">11/24</div></div><p>19:00 TD 307 · 重点 PS6 + L13–20</p></div>
 </div>
-<h2>分模块复习路径</h2>
+<h2>Quiz 3 四步冲刺路径</h2>
 <div class="plan">
-  <article><b>模块一：基数与对角化（L1–L2, PS1 §1）</b>双射与单射、可数集与可数无穷集；\(\mathbb{Z},\mathbb{N}^2,\mathbb{N}^k,\{0,1\}^*,\mathbb{Q}\) 的可数性；康托尔对角化证明 \(|\mathbb{R}|&gt;|\mathbb{N}|\) 与康托尔定理 \(|\mathcal{P}(X)|&gt;|X|\)；由计数论证推出不可判定语言的存在性。</article>
-  <article><b>模块二：图灵机模型与等价性（L3–L6, PS1 §2, PS2）</b>图灵机 7 元组、配置 \(uqv\) 与 \(\mathrm{NEXT}(C_i)\) 边界条件；可判定语言的封闭性（补、反转、并、交、连接）；Stay / Reset / 单向无穷带 / 多带图灵机的等价模拟；通用图灵机 \(U\) 的二进制编码 \(\langle M\rangle=1^k01^m0\langle\delta\rangle\)。</article>
-  <article class="today"><b>模块三：不可判定性、映射归约与莱斯定理（L7–L9, PS3, PS4）</b>自拒绝语言 \(L_{\mathrm{self}}\) 与接受问题 \(A_{\mathrm{TM}}\)；\(L\) 可判定 \(\iff L,\overline{L}\) 均可识别；\(\mathrm{HALT}_{\mathrm{TM}}\) 的图灵归约；映射归约 \(A\le_m B\) 及 \(E_{\mathrm{TM}},\mathrm{EQ}_{\mathrm{TM}},\overline{\mathrm{EQ}_{\mathrm{TM}}},L_{01}\) 的不可识别性；莱斯定理与 PS4 不可识别归约模板。</article>
-  <article class="today"><b>模块四：时间复杂性、时间层次定理与 P vs NP（L10–L12）</b>最坏情况时间复杂度、\(O/\Omega/\Theta/o/\omega\) 渐近记号；\(k\) 带转单带的 \(O(T(n)^2)\) 开销与复杂性类 \(\mathrm{P}\)；带时钟对角化与时间层次定理 \(\mathrm{TIME}(T^4)\setminus\mathrm{TIME}(o(T))\ne\emptyset\)；多项式时间验证机、完备性与可靠性、复杂性类 \(\mathrm{NP}\)、多项式时间归约 \(A\le_P B\) 与 \(\mathrm{NP}\) 完全性。</article>
+  <article class="today"><b>第一步：布尔电路、布尔公式与 PSIZE（L13–14）</b>牢记电路 Size/Depth <b>只统计无限制扇入的 AND/OR 门（NOT 门不计）</b>，而公式 Size \(L(F)\) 统计<b>树表示的叶子数</b>；掌握 \(A_{\mathrm{TM}}^{\mathrm{cert}}\) 一元填充、Shannon 上界 \(2^n+1\) 与计数下界 \(2^{n/2}/4\)、\(\mathrm{CVP}\in\mathrm{P}\)、\(\mathrm{CIRCUIT\text{-}SAT}\in\mathrm{NP}\)，以及一元停机语言证明 \(\mathrm{P}\subsetneq\mathrm{PSIZE}\)（非一致性硬编码）。</article>
+  <article class="today"><b>第二步：精刷 Problem Set 6 全部 5 道大题（必考题源！）</b>① \(A_{\mathrm{TM}}\) 是 NP-hard（固定 \(M_L\) 拼串 \(O(|x|)\)）但非 NP-complete（不可判定 \(\notin\mathrm{NP}\)）；② \(\mathrm{EXACTONE}_n\) 电路与展开公式（DNF 叶数 \(\Theta(n^2)\) vs 分治叶数 \(\Theta(n\log n)\)）；③ Shannon 计数不等式；④ 字典序穷举真值表构造可判定语言 \(L\notin\mathrm{PSIZE}\) 并推得 \(A_{\mathrm{TM}}\notin\mathrm{PSIZE}\)；⑤ 奇偶校验公式叶数 \(O(n^2)\) 上界与 Subbotovskaya \(\Omega(n\log n)\) 六步证明。</article>
+  <article class="today"><b>第三步：电路模拟 TM 与 Cook–Levin 定理（L16–17）</b>掌握 4 格局部窗口 \(\Delta_M(B_{i-1},B_i,B_{i+1},B_{i+2})=B'_i\) 堆叠 \(T(n)\) 层得 \(\mathrm{TIME}(T)\subseteq\mathrm{SIZE}(T^2)\)（从而 \(\mathrm{P}\subseteq\mathrm{PSIZE}\)）；把验证机电路硬编码 \(w\)、留空证书线 \(c\) 证 \(\mathrm{CIRCUIT\text{-}SAT}\) 为 NP-complete；用 <b>Tseitin 变换</b>（每门引入变量 \(y_g\) 写 \(k+1\) 个子句，避免展开树指数爆炸）证 \(\mathrm{CIRCUIT\text{-}SAT}\le_P\mathrm{SAT}\)。</article>
+  <article class="today"><b>第四步：空间复杂性、类 NL 与 Savitch 定理（L18–20 + PS5 回顾）</b>理解只读输入带 + 工作带模型；掌握 \(\mathrm{BALANCED}\in\mathrm{L}\)、\(\mathrm{SAT}\in\mathrm{PSPACE}\)（空间重用）、配置计数 \(\mathrm{SPACE}(s)\subseteq\mathrm{TIME}(2^{O(s)})\)、空间层次定理 \(\mathrm{SPACE}(s)\subsetneq\mathrm{SPACE}(s\log s)\) 与 \(\mathrm{L}\ne\mathrm{PSPACE}\)；理解 \(\mathrm{NL}\) 的<b>从左到右单向只读证书</b>限制、\(\mathrm{STCONN}\in\mathrm{NL}\) 以及折半递归 Savitch 定理 \(\mathrm{NSPACE}(s)\subseteq\mathrm{SPACE}(s^2)\implies\mathrm{PSPACE}=\mathrm{NPSPACE}\)。</article>
 </div>
 `,
   sheet: String.raw`
@@ -84,7 +83,14 @@ Review.setup({
 <h3>6. Practice Midterm 样卷与 PS5 高频考点速记</h3>
 <p><b>样卷多选陷阱</b>：(1) 任何单个语言 \(A\subseteq\{0,1\}^*\)（含 \(A_{\mathrm{TM}}\)）和全体图灵机编码集都是<b>可数集</b>；全体<b>有限语言</b>的集合也是<b>可数集</b>；唯独全体语言 \(\mathcal{P}(\{0,1\}^*)\) 不可数。(2) 仅 \(\overline{L}\) 可判定能推出 \(L\) 可判定；\(L\subseteq A\)、\(A\le_m L\)（方向反了！应为 \(L\le_m A\)）、\(L=A\cup B\)（仅一方可判定）均不能推出 \(L\) 可判定。(3) \(T_B(n)=\Theta(n^2),T_C(n)=\Theta(n\log n)\) 表示<b>最坏</b>时间：不能推出 \(C\) 在所有输入上比 \(B\) 快，但对充分大的 \(n\)，在使 \(B\) 达到最坏时间 \(\Theta(n^2)\) 的那个输入 \(x_n\) 上 \(C\) 必比 \(B\) 快。</p>
 <p><b>样卷简答与大题</b>：(1) 全体双射 \(f:\mathbb{N}\to\mathbb{N}\) <b>不可数</b>（将 \(\mathbb{N}\) 划分为配对块 \(\{2k,2k+1\}\)，在每块上独立取恒等或对换即可嵌入 \(\{0,1\}^{\mathbb{N}}\)）。(2) 每次固定跳 \(\pm 2\) 格的 TM <b>不能</b>判定所有可判定语言（磁头永远位于奇数坐标格 \(1+2k\)，看不见偶数位字符）。(3) \(A,B\) 可识别 \(\implies A\cup B\) 可识别：必须<b>按步交错模拟</b> \(M_A(x),M_B(x)\)，任一接受即接受。(4) \(\mathrm{COMPOSITE}\in\mathrm{NP}\)：证书为非平凡因子对 \((a,b)\)（\(1&lt;a,b&lt;N\)），验证机在 \(O(n^2)\) 内算乘法比对 \(ab=N\)。(5) \(L_{\mathrm{even\text{-}acc}}\) 不可识别：构造 \(N(x)\) 在 \(|x|\) 为偶数时直接接受，\(|x|\) 为奇数时模拟 \(M(w)\) 接受后才接受（归约 \(\overline{A_{\mathrm{TM}}}\le_m L_{\mathrm{even\text{-}acc}}\)）。(6) \(L=\{\langle M\rangle\mid\exists n\ge 0,0^n1^n\in L(M)\}\)：<b>可识别</b>（按阶段 \(s\) 交错模拟 \(n\le s\) 的 \(M(0^n1^n)\) 共 \(s\) 步）但<b>不可判定</b>（\(A_{\mathrm{TM}}\le_m L\) 或莱斯定理）。</p>
-<p><b>PS5 核心结论</b>：(1) 单带 TM 隔一抹一判定 \(|w|=2^k\) 最坏耗时 \(\Theta(n\log n)\)；(2) \(\mathrm{INDEPENDENT\text{-}SET}\le_P\mathrm{CLIQUE}\)：输出补图 \(\langle\overline{G},k\rangle\)（\(k\) 不变，非自环边取反）。</p>
+<p><b>PS5 核心结论</b>：(1) 单带 TM 隔一抹一判定 \(|w|=2^k\) 最坏耗时 \(\Theta(n\log n)\)（双带耗时 \(\Theta(n)\)）；(2) \(\mathrm{INDEPENDENT\text{-}SET}\le_P\mathrm{CLIQUE}\)：输出补图 \(\langle\overline{G},k\rangle\)（\(k\) 不变，非自环边取反）。</p>
+
+<h3>7. Quiz 3 核心速记：布尔电路、Cook–Levin、PS6 与空间复杂性（L13–20, PS6）</h3>
+<p><b>电路与公式定义</b>：电路使用无限制扇入 \(\land,\lor\) 与 \(\neg\)，<b>Size / Depth 只数 \(\land,\lor\) 门（\(\neg\) 免费）</b>；公式要求每门扇出 \(\le 1\)，<b>公式 Size \(L(F)\) 统计树表示的叶子总数</b>。Shannon 上界：任意 \(f:\{0,1\}^n\to\{0,1\}\) 有 Size \(\le 2^n+1\) 电路与 \(\le 2^n\) 子句 CNF；Shannon 下界：\(\forall n\ge 4\)，存在 \(f\) 不能被 Size \(\le 2^{n/2}/4\) 电路计算（\(2^{2^n}\) 函数多于 \(2(n+s+1)2^{s^2+2ns}\) 个小电路）。</p>
+<p><b>PSIZE 与非一致性</b>：\(\mathrm{CVP}\in\mathrm{P}\)，\(\mathrm{CIRCUIT\text{-}SAT}\in\mathrm{NP}\)。一元停机语言 \(L=\{1^n:M_n(\varepsilon)\text{ 停机}\}\) 不可判定但在 \(\mathrm{SIZE}(n)\subseteq\mathrm{PSIZE}\) 中（非一致性硬编码），结合 \(\mathrm{TIME}(T)\subseteq\mathrm{SIZE}(T^2)\)（4 格局部窗口 \(\Delta_M(B_{i-1},B_i,B_{i+1},B_{i+2})=B'_i\)，单层 \(O(T)\) 堆叠 \(T\) 层得 \(O(T^2)\)）证得 \(\mathrm{P}\subsetneq\mathrm{PSIZE}\)。</p>
+<p><b>Cook–Levin 定理</b>：① 对任意 \(Y\in\mathrm{NP}\)，将验证机 \(V(w,c)\) 转成 \(O(|w|^{2k})\) 电路，硬编码 \(w\)、留证书线 \(c\) 为输入得 \(Y\le_P\mathrm{CIRCUIT\text{-}SAT}\)；② <b>Tseitin 变换</b>证 \(\mathrm{CIRCUIT\text{-}SAT}\le_P\mathrm{SAT}\)：为每门引入变量 \(y_g\)，对 \(k\) 输入 OR 门写 \((\neg y_g\lor z_1\lor\cdots\lor z_k)\land\bigwedge_{j=1}^k(y_g\lor\neg z_j)\)（\(k+1\) 个子句），总公式 \(y_{g_{\mathrm{out}}}\land\bigwedge_g C_g\)，避免展开树的指数爆炸！</p>
+<p><b>PS6 五题精髓</b>：① \(A_{\mathrm{TM}}\) 是 NP-hard（固定 \(M_L\)，\(f(x)=\langle M_L,x\rangle\) 仅需 \(O(|x|)\) 拼串）但非 NP-complete（不可判定 \(\notin\mathrm{NP}\)）；② \(\mathrm{EXACTONE}_n\) 无限制扇入电路 Size \(n+1=\Theta(n)\)、Depth \(2\)，DNF 公式叶数 \(\Theta(n^2)\)，分治公式叶数 \(\Theta(n\log n)\)；④ 字典序穷举真值表找首个硬函数得可判定语言 \(L\notin\mathrm{PSIZE}\)，硬连线 \(\langle D,x\rangle\) 推得 \(A_{\mathrm{TM}}\notin\mathrm{PSIZE}\)；⑤ 奇偶函数电路 \(\Theta(n)\)、公式上界 \(O(n^2)\)、Subbotovskaya 下界：选出现 \(\ge L(F)/n\) 次的 \(x_i\) 赋湮灭值消去 \(m_i\) 片 \(x_i\) 叶及兄弟子树中 \(\ge 1\) 片其它变量叶，得 \(L(\oplus_{n-1})\le \frac{n-1}{n}L(\oplus_n)-1\)，除以 \(n-1\) 望远镜求和得 \(L(\oplus_n)\ge n(1+\sum_{j=1}^{n-1}\frac{1}{j})=\Omega(n\log n)\)。</p>
+<p><b>空间复杂性（L18–20）</b>：第 1 带只读输入、第 2 带工作带计空间。\(\mathrm{L}=\mathrm{SPACE}(\log n)\)（如 \(\mathrm{BALANCED}\in\mathrm{L}\)），\(\mathrm{SAT}\in\mathrm{PSPACE}\)（复用工作空间枚举赋值 \(\implies\mathrm{NP}\subseteq\mathrm{PSPACE}\)）。配置计数（\(s\ge\log n\) 时共 \(2^{O(s)}\) 个配置）证 \(\mathrm{SPACE}(s)\subseteq\mathrm{TIME}(2^{O(s)})\)；空间层次定理 \(\mathrm{SPACE}(s)\subsetneq\mathrm{SPACE}(s\log s)\implies\mathrm{L}\ne\mathrm{PSPACE}\)。\(\mathrm{NL}=\mathrm{NSPACE}(\log n)\) 要求<b>单向从左到右只读证书一次</b>，\(\mathrm{STCONN}\in\mathrm{NL}\)；Savitch 折半递归证 \(\mathrm{STCONN}\in\mathrm{SPACE}(\log^2 n)\) 及 \(\mathrm{NSPACE}(s)\subseteq\mathrm{SPACE}(s^2)\implies\mathrm{PSPACE}=\mathrm{NPSPACE}\)。</p>
 </div>
 `,
   tm: [
